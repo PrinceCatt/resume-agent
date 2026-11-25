@@ -1,0 +1,42 @@
+{
+  "name": "resume-agent",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "Local job-application helper: tailors the resume for each job and lets an agent fill the application form; nothing is submitted until you confirm.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PrinceCatt/resume-agent.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "vite build",
+    "start": "node --disable-warning=ExperimentalWarning server/index.ts",
+    "serve": "vite build && node --disable-warning=ExperimentalWarning server/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p server/tsconfig.json --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --test server/*.test.ts"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "pdfjs-dist": "^6.5.438",
+    "playwright-core": "^1.65.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+# Everything personal: profile, jobs, API key, extension token, PDFs, screenshots.
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+tmp/
+*.log
+.DS_Store

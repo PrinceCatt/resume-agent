@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply - Software Engineer Intern (mock Indeed-style form)</title>
+<!-- Local test page for resume-agent: an Indeed-style apply form (contact → resume → questions →
+     review) in its own tab that closes itself a few seconds after submitting. No branding; nothing is sent anywhere. -->
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; color: #222; line-height: 1.5; }
+  .banner { background: #fff4d6; border: 1px solid #e8c66b; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  section { display: none; }
+  section.on { display: block; }
+  label { display: block; font-weight: 600; margin-top: 12px; }
+  input[type=text], input[type=email], input[type=tel] { width: 100%; padding: 7px; font: inherit; box-sizing: border-box; }
+  .err { color: #c00; font-size: 13px; }
+  fieldset { border: 0; padding: 0; margin: 12px 0 0; }
+  legend { font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="banner">Local test page for resume-agent (mock apply form in a new tab). Nothing here is sent anywhere.</p>
+<p style="font-size:13px;color:#666">Software Engineer Intern · Acme Robotics</p>
+<p class="err" id="err" role="alert"></p>
+
+<section class="on" data-step="1">
+  <h2>Add your contact information</h2>
+  <label for="fn">First name *</label><input id="fn" type="text" required>
+  <label for="ln">Last name *</label><input id="ln" type="text" required>
+  <label for="em">Email *</label><input id="em" type="email" required>
+  <label for="ph">Phone number (optional)</label><input id="ph" type="tel">
+  <label for="city">City, State (optional)</label><input id="city" type="text">
+</section>
+
+<section data-step="2">
+  <h2>Add a resume for the employer</h2>
+  <fieldset>
+    <legend>Resume *</legend>
+    <label style="font-weight:400"><input type="radio" name="res" value="indeed" checked> Indeed Resume (built from your profile)</label>
+    <label style="font-weight:400"><input type="radio" name="res" value="file"> Upload a resume file</label>
+  </fieldset>
+  <div id="up" style="display:none"><input type="file" id="file" accept=".pdf" aria-label="Resume file"></div>
+</section>
+
+<section data-step="3">
+  <h2>Answer questions from the employer</h2>
+  <fieldset>
+    <legend>Are you currently enrolled in a degree programme? *</legend>
+    <label style="font-weight:400"><input type="radio" name="enrolled" value="Yes"> Yes</label>
+    <label style="font-weight:400"><input type="radio" name="enrolled" value="No"> No</label>
+  </fieldset>
+</section>
+
+<section data-step="4">
+  <h2>Please review your application</h2>
+  <div id="review"></div>
+</section>
+
+<section data-step="5">
+  <h2>Your application has been submitted!</h2>
+  <p>This tab closes in a few seconds.</p>
+</section>
+
+<p><button id="go" type="button">Continue</button></p>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let step = 1;
+  document.querySelectorAll("input[name=res]").forEach((r) => (r.onchange = () => ($("up").style.display = document.querySelector("input[name=res]:checked").value === "file" ? "" : "none")));
+  function render() {
+    document.querySelectorAll("section").forEach((s) => s.classList.toggle("on", Number(s.dataset.step) === step));
+    $("go").textContent = step === 4 ? "Submit your application" : "Continue";
+    $("go").style.display = step === 5 ? "none" : "";
+    $("err").textContent = "";
+    if (step === 4) {
+      const res = document.querySelector("input[name=res]:checked").value;
+      $("review").innerHTML = `${$("fn").value} ${$("ln").value} · ${$("em").value} · ${$("ph").value}<br>Resume: ${res === "file" ? ($("file").files[0]?.name || "(none)") : "Indeed Resume"}<br>Enrolled: ${document.querySelector("input[name=enrolled]:checked")?.value ?? ""}`;
+    }
+  }
+  $("go").onclick = () => {
+    if (step === 1 && (!$("fn").value || !$("ln").value || !$("em").value)) { $("err").textContent = "Fill in the required fields"; return; }
+    if (step === 2 && document.querySelector("input[name=res]:checked").value === "file" && !$("file").files.length) { $("err").textContent = "Upload a file"; return; }
+    if (step === 3 && !document.querySelector("input[name=enrolled]:checked")) { $("err").textContent = "Answer the question"; return; }
+    if (step === 4) {
+      window.opener?.postMessage("applied", "*");
+      // Recorded on the opener, since this tab is about to close.
+      try { window.opener.__submitted = { res: document.querySelector("input[name=res]:checked").value, enrolled: document.querySelector("input[name=enrolled]:checked").value }; } catch {}
+      setTimeout(() => window.close(), 4000);
+    }
+    step++;
+    render();
+  };
+</script>
+</body>
+</html>

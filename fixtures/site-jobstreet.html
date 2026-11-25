@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Just a moment...</title>
+<!-- Local test page for resume-agent: a Quick apply-style four-step form (documents → employer
+     questions → profile → review) behind a "Just a moment..." screen that clears after a while,
+     like a bot check passed by the person. Not JobStreet, no branding; nothing is sent anywhere. -->
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; color: #222; line-height: 1.5; }
+  .banner { background: #fff4d6; border: 1px solid #e8c66b; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  .page { display: none; }
+  .page.on { display: block; }
+  label { display: block; margin-top: 8px; }
+  textarea { width: 100%; min-height: 120px; font: inherit; box-sizing: border-box; }
+  select { width: 100%; padding: 7px; font: inherit; }
+  .err { color: #c00; font-size: 13px; }
+  fieldset { border: 1px solid #ddd; border-radius: 6px; margin: 14px 0; padding: 8px 12px; }
+  legend { font-weight: 600; }
+  .steps { font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+<div id="check" class="page on">
+  <h2>Checking if the site connection is secure</h2>
+  <p>Verify you are human. This mock check clears by itself after <span id="secs">12</span> seconds.</p>
+</div>
+
+<div id="job" class="page">
+  <p class="banner">Local test page for resume-agent (mock Quick apply-style form). Nothing here is sent anywhere.</p>
+  <h1>Software Engineer Intern</h1>
+  <p><b>Acme Robotics</b> · Singapore · Internship</p>
+  <p><button id="quick">Quick apply</button> <button>Save</button></p>
+  <h3>Requirements</h3>
+  <ul>
+    <li>Currently pursuing a degree in Computer Engineering or Computer Science</li>
+    <li>Good command of Java or Python, and data structures and algorithms</li>
+    <li>Experience with Spring Boot, MySQL or Redis</li>
+  </ul>
+</div>
+
+<div id="apply" class="page">
+  <p class="banner">Local test page for resume-agent. Nothing here is sent anywhere.</p>
+  <p class="steps" id="steps"></p>
+  <p class="err" id="err" role="alert"></p>
+
+  <section class="page" data-step="1">
+    <h2>Choose documents</h2>
+    <fieldset>
+      <legend>Resumé</legend>
+      <label><input type="radio" name="res" value="upload"> Upload a resumé</label>
+      <label><input type="radio" name="res" value="select" checked> Select a resumé: Resume_old.pdf</label>
+      <label><input type="radio" name="res" value="none"> Don't include a resumé</label>
+      <div id="resUp" style="display:none"><input type="file" id="resFile" accept=".pdf" aria-label="Upload a resumé file"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Cover letter</legend>
+      <label><input type="radio" name="cl" value="upload"> Upload a cover letter</label>
+      <label><input type="radio" name="cl" value="write"> Write a cover letter</label>
+      <label><input type="radio" name="cl" value="none" checked> Don't include a cover letter</label>
+      <div id="clUp" style="display:none"><input type="file" id="clFile" accept=".pdf" aria-label="Upload a cover letter file"></div>
+      <div id="clWrite" style="display:none"><label for="clText">Cover letter</label><textarea id="clText"></textarea></div>
+    </fieldset>
+  </section>
+
+  <section class="page" data-step="2">
+    <h2>Answer employer questions</h2>
+    <label for="q1">How many years' experience do you have as a software engineer? *</label>
+    <select id="q1" required><option value="">Select an option</option><option>No experience</option><option>Less than 1 year</option><option>1 year</option><option>2 years</option><option>3 years or more</option></select>
+    <label for="q2">Which programming languages are you experienced in? *</label>
+    <select id="q2" required><option value="">Select an option</option><option>Java</option><option>Python</option><option>JavaScript</option><option>Go</option><option>None of these</option></select>
+  </section>
+
+  <section class="page" data-step="3">
+    <h2>Update your profile</h2>
+    <p>Employers will see this profile with your application.</p>
+    <p><b>Career history</b> — Student, Example University <button type="button">Edit</button></p>
+    <p><b>Skills</b> — Java, Python <button type="button">Edit</button></p>
+  </section>
+
+  <section class="page" data-step="4">
+    <h2>Review and submit</h2>
+    <div id="review"></div>
+  </section>
+
+  <section class="page" data-step="5">
+    <h2>Application sent</h2>
+    <p>Your application for Software Engineer Intern at Acme Robotics was sent.</p>
+  </section>
+
+  <p><button id="cont" type="button">Continue</button></p>
+</div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const show = (id) => document.querySelectorAll("body > .page").forEach((p) => p.classList.toggle("on", p.id === id));
+  let left = 12;
+  const tick = setInterval(() => {
+    left--;
+    $("secs").textContent = left;
+    if (left <= 0) { clearInterval(tick); document.title = "Software Engineer Intern Job in Singapore - Acme Robotics (mock)"; show("job"); }
+  }, 1000);
+  let step = 1;
+  const names = ["Choose documents", "Answer employer questions", "Update your profile", "Review and submit"];
+  function render() {
+    document.querySelectorAll("#apply section").forEach((s) => s.classList.toggle("on", Number(s.dataset.step) === step));
+    $("steps").textContent = step < 5 ? names.map((n, i) => (i + 1 === step ? `[${n}]` : n)).join(" → ") : "";
+    $("cont").textContent = step === 4 ? "Submit application" : "Continue";
+    $("cont").style.display = step === 5 ? "none" : "";
+    $("err").textContent = "";
+    if (step === 4) {
+      const res = document.querySelector("input[name=res]:checked").value;
+      const cl = document.querySelector("input[name=cl]:checked").value;
+      $("review").innerHTML = `Resumé: ${res === "upload" ? ($("resFile").files[0]?.name || "(none)") : res === "select" ? "Resume_old.pdf" : "not included"}<br>Cover letter: ${cl === "upload" ? ($("clFile").files[0]?.name || "(none)") : cl === "write" ? "written (" + $("clText").value.length + " chars)" : "not included"}<br>Experience: ${$("q1").value}<br>Languages: ${$("q2").value}`;
+    }
+  }
+  $("quick").onclick = () => { show("apply"); render(); };
+  document.querySelectorAll("input[name=res]").forEach((r) => (r.onchange = () => ($("resUp").style.display = r.value === "upload" && r.checked ? "" : "none")));
+  document.querySelectorAll("input[name=cl]").forEach((r) => (r.onchange = () => { const v = document.querySelector("input[name=cl]:checked").value; $("clUp").style.display = v === "upload" ? "" : "none"; $("clWrite").style.display = v === "write" ? "" : "none"; }));
+  $("cont").onclick = () => {
+    if (step === 1 && document.querySelector("input[name=res]:checked").value === "upload" && !$("resFile").files.length) { $("err").textContent = "Upload a resumé file"; return; }
+    if (step === 2 && (!$("q1").value || !$("q2").value)) { $("err").textContent = "Answer all required questions"; return; }
+    if (step === 4) window.__submitted = { res: document.querySelector("input[name=res]:checked").value, cl: document.querySelector("input[name=cl]:checked").value, q1: $("q1").value, q2: $("q2").value };
+    step++;
+    render();
+  };
+</script>
+</body>
+</html>

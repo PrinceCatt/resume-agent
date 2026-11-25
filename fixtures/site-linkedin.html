@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Software Engineer Intern - Acme Robotics (mock LinkedIn-style job page)</title>
+    <!-- Local test page for resume-agent: an Easy Apply-style dialog on top of a very busy page, so the
+     dialog's controls would fall past the snapshot's element cap if they were not listed first.
+     Not LinkedIn, no branding; nothing is sent anywhere. -->
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        color: #222;
+        line-height: 1.45;
+      }
+      header {
+        display: flex;
+        gap: 6px;
+        padding: 8px 16px;
+        border-bottom: 1px solid #ddd;
+        flex-wrap: wrap;
+      }
+      header button {
+        padding: 4px 8px;
+      }
+      .banner {
+        background: #fff4d6;
+        border: 1px solid #e8c66b;
+        padding: 8px 12px;
+        margin: 12px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 16px;
+        padding: 0 16px;
+      }
+      .list {
+        max-height: 80vh;
+        overflow: auto;
+        border-right: 1px solid #eee;
+      }
+      .list div {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 4px 0;
+        font-size: 13px;
+      }
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        display: none;
+      }
+      .modal {
+        position: fixed;
+        top: 6vh;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(560px, 94vw);
+        max-height: 86vh;
+        overflow: auto;
+        background: #fff;
+        border-radius: 8px;
+        padding: 18px 20px;
+        display: none;
+      }
+      .modal label {
+        display: block;
+        font-weight: 600;
+        margin-top: 12px;
+      }
+      .modal input[type="text"],
+      .modal input[type="tel"],
+      .modal input[type="email"],
+      .modal input[type="number"],
+      .modal select {
+        width: 100%;
+        padding: 7px;
+        font: inherit;
+        box-sizing: border-box;
+      }
+      .step {
+        display: none;
+      }
+      .step.on {
+        display: block;
+      }
+      .bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .err {
+        color: #c00;
+        font-size: 13px;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        margin: 12px 0 0;
+      }
+      legend {
+        font-weight: 600;
+      }
+      /* LinkedIn-style yes/no buttons: the real radio is transparent, its label is the button. */
+      .pill input {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+      }
+      .pill label {
+        display: inline-block;
+        border: 1px solid #888;
+        border-radius: 16px;
+        padding: 3px 14px;
+        margin-right: 6px;
+        cursor: pointer;
+        font-weight: 400;
+      }
+      .pill input:checked + label {
+        background: #0a66c2;
+        color: #fff;
+        border-color: #0a66c2;
+      }
+      .li26 .opt {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 4px 0;
+      }
+      .li26 .opt p {
+        margin: 0;
+      }
+      .li26 label {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header id="nav"></header>
+    <p class="banner">Local test page for resume-agent (mock job page with an Easy Apply-style dialog). Nothing here is sent anywhere.</p>
+    <main>
+      <div class="list" id="list"></div>
+      <article>
+        <h1>Software Engineer Intern</h1>
+        <p><b>Acme Robotics</b> · Singapore · Internship (May–Aug 2027) · 48 applicants</p>
+        <p>
+          <button id="easy">Easy Apply</button> <button>Save</button>
+          <button>Share</button>
+        </p>
+        <h2>About the job</h2>
+        <p>You will build backend services and tools for our warehouse robots.</p>
+        <h3>Requirements</h3>
+        <ul>
+          <li>Currently pursuing a degree in Computer Engineering or Computer Science</li>
+          <li>Good command of Java or Python, and data structures and algorithms</li>
+          <li>Experience with Spring Boot, MySQL or Redis</li>
+          <li>Familiarity with Linux and Git</li>
+        </ul>
+        <h3>Nice to have</h3>
+        <ul>
+          <li>ROS or embedded programming (ARM)</li>
+          <li>Docker</li>
+        </ul>
+      </article>
+    </main>
+
+    <div class="backdrop" id="backdrop"></div>
+    <div class="modal" id="modal" role="dialog" aria-labelledby="mh">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <h2 id="mh" style="margin: 0">Apply to Acme Robotics</h2>
+        <button id="close" aria-label="Dismiss">✕</button>
+      </div>
+      <div id="progress" style="font-size: 13px; color: #666"></div>
+      <p class="err" id="err"></p>
+
+      <section class="step on" data-step="1">
+        <h3>Contact info</h3>
+        <label for="email">Email address *</label>
+        <input id="email" type="email" value="old.address@example.com" required />
+        <label for="cc">Phone country code *</label>
+        <select id="cc" required>
+          <option value="">Select an option</option>
+          <option>China (+86)</option>
+          <option>Malaysia (+60)</option>
+          <option>Singapore (+65)</option>
+          <option>United States (+1)</option>
+        </select>
+        <label for="phone">Mobile phone number *</label>
+        <input id="phone" type="tel" required />
+      </section>
+
+      <section class="step" data-step="2">
+        <h3>Resume</h3>
+        <p style="font-size: 13px">Be sure to include an updated resume *</p>
+        <fieldset>
+          <legend>Choose a resume</legend>
+          <label style="font-weight: 400"><input type="radio" name="res" value="old" checked /> Resume_2024.pdf (uploaded 1 year ago)</label>
+          <label style="font-weight: 400"
+            ><input type="radio" name="res" value="new" id="resnew" disabled /> <span id="newname">(upload a new one)</span></label
+          >
+        </fieldset>
+        <input id="file" type="file" accept=".pdf" style="display: none" aria-label="Upload resume" />
+        <p>
+          <button type="button" id="upload">Upload resume</button>
+          <span style="font-size: 12px; color: #666">PDF, DOCX (5 MB)</span>
+        </p>
+      </section>
+
+      <section class="step" data-step="3">
+        <h3>Additional questions</h3>
+        <label for="yrs">How many years of work experience do you have with Java? *</label>
+        <input id="yrs" type="number" min="0" required />
+        <label for="grad">When do you expect to graduate? *</label>
+        <input id="grad" type="text" required />
+        <fieldset class="pill">
+          <legend>Are you willing to undergo a background check, in accordance with local law/regulations? *</legend>
+          <input type="radio" name="bg" id="bgYes" value="Yes" /><label for="bgYes">Yes</label> <input type="radio" name="bg" id="bgNo" value="No" /><label
+            for="bgNo"
+            >No</label
+          >
+        </fieldset>
+        <!-- LinkedIn's 2026 markup (read from a real Easy Apply): no legend, the question is every
+         option's aria-label, the <label> is empty and the option's words sit in a <p> beside it. -->
+        <label class="q">Do you have a valid driver's license? *</label>
+        <fieldset role="radiogroup" aria-describedby="error-message-dl" class="li26">
+          <div>
+            <div>
+              <div class="opt">
+                <div><input id="dlYes" aria-label="Do you have a valid driver's license?" type="radio" name="radio-group-dl" /><label for="dlYes"></label></div>
+                <div><p>Yes</p></div>
+              </div>
+            </div>
+            <div>
+              <div class="opt">
+                <div><input id="dlNo" aria-label="Do you have a valid driver's license?" type="radio" name="radio-group-dl" /><label for="dlNo"></label></div>
+                <div><p>No</p></div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+        <!-- Pre-set to "Yes" the way LinkedIn restores a saved draft: the candidate's degree is still in
+             progress, so the right answer is No. -->
+        <label class="q">Have you completed the following level of education: Bachelor's Degree? *</label>
+        <fieldset role="radiogroup" aria-describedby="error-message-edu" class="li26">
+          <div>
+            <div>
+              <div class="opt">
+                <div><input id="eduYes" aria-label="Have you completed the following level of education: Bachelor's Degree?" type="radio" name="radio-group-edu" checked /><label for="eduYes"></label></div>
+                <div><p>Yes</p></div>
+              </div>
+            </div>
+            <div>
+              <div class="opt">
+                <div><input id="eduNo" aria-label="Have you completed the following level of education: Bachelor's Degree?" type="radio" name="radio-group-edu" /><label for="eduNo"></label></div>
+                <div><p>No</p></div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      </section>
+
+      <section class="step" data-step="4">
+        <h3>Review your application</h3>
+        <div id="review" style="font-size: 14px; background: #f6f6f6; padding: 8px 10px; border-radius: 6px"></div>
+        <p>
+          <label style="font-weight: 400"><input type="checkbox" id="follow" checked /> Follow Acme Robotics to stay up to date with their page.</label>
+        </p>
+      </section>
+
+      <section class="step" data-step="5">
+        <h3>Your application was sent to Acme Robotics</h3>
+        <p>You can keep track of your application in My Jobs.</p>
+      </section>
+
+      <div class="bar" id="bar">
+        <button id="back" type="button">Back</button>
+        <button id="next" type="button">Next</button>
+      </div>
+    </div>
+
+    <div class="modal" id="discard" role="alertdialog" style="z-index: 3; top: 30vh">
+      <p><b>Save this application?</b></p>
+      <div class="bar"><button id="discardBtn">Discard</button><button id="saveBtn">Save</button></div>
+    </div>
+
+    <script>
+      const nav = document.getElementById("nav");
+      for (const t of ["Home", "My Network", "Jobs", "Messaging", "Notifications", "Me", "For Business", "Try Premium"])
+        nav.insertAdjacentHTML("beforeend", `<button>${t}</button>`);
+      const list = document.getElementById("list");
+      for (let i = 1; i <= 160; i++)
+        list.insertAdjacentHTML(
+          "beforeend",
+          `<div><span>Similar job ${i} · Company ${i}</span><button>Save job ${i}</button><button>Hide job ${i}</button></div>`,
+        );
+      const $ = (id) => document.getElementById(id);
+      let step = 1;
+      const labels = {
+        1: "Next",
+        2: "Next",
+        3: "Review",
+        4: "Submit application",
+        5: "Done",
+      };
+      function show() {
+        document.querySelectorAll(".step").forEach((s) => s.classList.toggle("on", Number(s.dataset.step) === step));
+        $("next").textContent = labels[step];
+        $("back").style.display = step > 1 && step < 5 ? "" : "none";
+        $("progress").textContent = step < 5 ? `Step ${step} of 4 · ${[0, 25, 50, 75, 100][step]}%` : "";
+        $("err").textContent = "";
+        if (step === 4) {
+          $("review").innerHTML =
+            `Email: ${$("email").value}<br>Phone: ${$("cc").value} ${$("phone").value}<br>Resume: ${document.querySelector("input[name=res]:checked").value === "new" ? $("newname").textContent : "Resume_2024.pdf"}<br>Java years: ${$("yrs").value}<br>Graduation: ${$("grad").value}<br>Background check: ${document.querySelector("input[name=bg]:checked")?.value ?? ""}<br>Driver's license: ${$("dlYes").checked ? "Yes" : $("dlNo").checked ? "No" : ""}<br>Completed bachelor's: ${$("eduYes").checked ? "Yes" : $("eduNo").checked ? "No" : ""}`;
+        }
+      }
+      $("easy").onclick = () => {
+        $("backdrop").style.display = "block";
+        $("modal").style.display = "block";
+        show();
+      };
+      $("upload").onclick = () => $("file").click();
+      $("file").onchange = () => {
+        const f = $("file").files[0];
+        if (!f) return;
+        $("newname").textContent = f.name;
+        $("resnew").disabled = false;
+        $("resnew").checked = true;
+      };
+      $("back").onclick = () => {
+        step--;
+        show();
+      };
+      $("close").onclick = () => {
+        $("discard").style.display = "block";
+      };
+      $("discardBtn").onclick = () => {
+        $("discard").style.display = "none";
+        $("modal").style.display = "none";
+        $("backdrop").style.display = "none";
+        step = 1;
+      };
+      $("saveBtn").onclick = () => {
+        $("discard").style.display = "none";
+        $("modal").style.display = "none";
+        $("backdrop").style.display = "none";
+      };
+      $("next").onclick = () => {
+        const need = { 1: ["email", "cc", "phone"], 3: ["yrs", "grad"] }[step] || [];
+        const missing = need.filter((id) => !$(id).value.trim());
+        if (step === 3 && !document.querySelector("input[name=bg]:checked")) missing.push("bgYes");
+        if (step === 3 && !document.querySelector("input[name=radio-group-dl]:checked")) missing.push("dlYes");
+        if (missing.length) {
+          $("err").textContent = "Please enter a valid answer";
+          missing.forEach((id) => $(id).setAttribute("aria-invalid", "true"));
+          return;
+        }
+        if (step === 5) {
+          $("modal").style.display = "none";
+          $("backdrop").style.display = "none";
+          $("easy").textContent = "Applied";
+          $("easy").disabled = true;
+          return;
+        }
+        if (step === 4)
+          window.__submitted = {
+            follow: $("follow").checked,
+            resume: document.querySelector("input[name=res]:checked").value,
+            email: $("email").value,
+            license: $("dlYes").checked ? "Yes" : $("dlNo").checked ? "No" : "",
+            completedBachelor: $("eduYes").checked ? "Yes" : $("eduNo").checked ? "No" : "",
+          };
+        step++;
+        show();
+      };
+    </script>
+  </body>
+</html>

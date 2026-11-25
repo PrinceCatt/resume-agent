@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Software Engineer Intern - Acme Robotics</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; color: #222; line-height: 1.5; }
+  .banner { background: #fff4d6; border: 1px solid #e8c66b; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  label { display: block; font-weight: 600; margin-top: 14px; }
+  input[type=text], input[type=email], input[type=tel], select { width: 100%; padding: 8px; font: inherit; box-sizing: border-box; }
+  .req { color: #c00; }
+  .err { color: #c00; font-size: 13px; }
+  button { padding: 10px 16px; font: inherit; cursor: pointer; }
+  #form { display: none; border-top: 1px solid #ddd; margin-top: 24px; padding-top: 8px; }
+  .combo { position: relative; }
+  .combo ul { position: absolute; left: 0; right: 0; background: #fff; border: 1px solid #aaa; list-style: none; margin: 0; padding: 0; z-index: 2; }
+  .combo li { padding: 6px 8px; cursor: pointer; }
+  .combo li:hover { background: #eef; }
+  .file-row { display: flex; gap: 8px; align-items: center; }
+  fieldset { border: 0; padding: 0; margin: 14px 0 0; }
+  legend { font-weight: 600; }
+</style>
+</head>
+<body>
+<p class="banner">Local test page for resume-agent. Nothing here is sent anywhere.</p>
+<h1>Software Engineer Intern</h1>
+<p><b>Acme Robotics</b> · Singapore · Internship (May–Aug 2027)</p>
+<h2>About the role</h2>
+<p>Company: Acme Robotics. You will build backend services and tools for our warehouse robots.</p>
+<h3>Requirements</h3>
+<ul>
+  <li>Currently pursuing a degree in Computer Engineering or Computer Science</li>
+  <li>Good command of Java or Python, and data structures and algorithms</li>
+  <li>Experience with Spring Boot, MySQL or Redis</li>
+  <li>Familiarity with Linux and Git</li>
+</ul>
+<h3>Nice to have</h3>
+<ul><li>ROS or embedded programming (ARM)</li><li>Docker</li></ul>
+
+<button id="apply">Apply for this job</button>
+
+<form id="form" novalidate>
+  <h2>Apply</h2>
+  <label for="fn">First Name <span class="req">*</span></label>
+  <input id="fn" type="text" required>
+  <label for="ln">Last Name <span class="req">*</span></label>
+  <input id="ln" type="text" required>
+  <label for="em">Email <span class="req">*</span></label>
+  <input id="em" type="email" required>
+  <label for="ph">Phone <span class="req">*</span></label>
+  <input id="ph" type="tel" required>
+
+  <label>Resume/CV <span class="req">*</span></label>
+  <div class="file-row">
+    <input id="resume" name="resume" type="file" accept=".pdf" style="display:none" aria-label="Resume/CV" required>
+    <button type="button" id="attach">Attach</button>
+    <span id="fname">No file chosen</span>
+  </div>
+
+  <label for="li">LinkedIn Profile</label>
+  <input id="li" type="text">
+
+  <label for="country">Country <span class="req">*</span></label>
+  <select id="country" required>
+    <option value="">Select...</option>
+    <option>China</option><option>Malaysia</option><option>Singapore</option><option>United States</option>
+  </select>
+
+  <label for="school">School <span class="req">*</span></label>
+  <div class="combo">
+    <input id="school" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" required autocomplete="off">
+    <ul id="schools" role="listbox" hidden></ul>
+  </div>
+
+  <fieldset>
+    <legend>Are you legally authorized to work in Singapore? <span class="req">*</span></legend>
+    <label style="font-weight:400"><input type="radio" name="auth" value="yes" required> Yes</label>
+    <label style="font-weight:400"><input type="radio" name="auth" value="no"> No</label>
+  </fieldset>
+
+  <label for="gender">Gender</label>
+  <select id="gender">
+    <option value="">Select...</option><option>Male</option><option>Female</option><option>Decline to self-identify</option>
+  </select>
+
+  <label style="font-weight:400"><input id="privacy" type="checkbox" required> I have read and agree to the privacy notice <span class="req">*</span></label>
+  <label style="font-weight:400"><input id="news" type="checkbox"> Send me job alerts and news</label>
+
+  <div id="errors" class="err" role="alert"></div>
+  <p><button type="submit">Submit Application</button></p>
+</form>
+<div id="done" hidden><h2>Thank you for applying!</h2><p>We have received your application.</p></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  $("apply").onclick = () => { $("form").style.display = "block"; $("apply").hidden = true; };
+  $("attach").onclick = () => $("resume").click();
+  $("resume").onchange = () => { $("fname").textContent = $("resume").files[0]?.name || "No file chosen"; };
+  const SCHOOLS = ["National University of Singapore", "Nanyang Technological University", "Singapore Management University", "Singapore University of Technology and Design"];
+  $("school").oninput = () => {
+    const v = $("school").value.toLowerCase();
+    const list = $("schools");
+    list.innerHTML = "";
+    const hits = SCHOOLS.filter((s) => v && s.toLowerCase().includes(v.split(" ")[0]));
+    for (const s of hits) {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.textContent = s;
+      li.onclick = () => { $("school").value = s; $("school").dataset.picked = "1"; list.hidden = true; };
+      list.appendChild(li);
+    }
+    list.hidden = hits.length === 0;
+    $("school").dataset.picked = "";
+  };
+  $("form").onsubmit = (e) => {
+    e.preventDefault();
+    const errs = [];
+    for (const id of ["fn", "ln", "em", "ph"]) if (!$(id).value.trim()) errs.push(`${document.querySelector(`label[for=${id}]`).textContent.replace("*", "").trim()} is required`);
+    if (!$("resume").files.length) errs.push("Resume/CV is required");
+    if (!$("country").value) errs.push("Country is required");
+    if (!$("school").dataset.picked) errs.push("Please pick a school from the list");
+    if (!document.querySelector("input[name=auth]:checked")) errs.push("Work authorization is required");
+    if (!$("privacy").checked) errs.push("You must agree to the privacy notice");
+    $("errors").textContent = errs.join(" · ");
+    if (!errs.length) { $("form").hidden = true; $("form").style.display = "none"; $("done").hidden = false; }
+  };
+</script>
+</body>
+</html>

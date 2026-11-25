@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef5f2;
+  --color-brand-100: #d6e8e0;
+  --color-brand-200: #b0d2c3;
+  --color-brand-500: #3f7a68;
+  --color-brand-600: #2f5d50;
+  --color-brand-700: #244a40;
+  --color-ink: #1d2421;
+  --color-muted: #66706b;
+  --color-line: #e2e6e3;
+  --color-paper: #f6f7f5;
+  /* chart marks: brand hue with enough chroma not to read as gray (checked with the dataviz validator) */
+  --color-chart: #1a8f68;
+  --color-chart-track: #d5ede3;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+html, body, #root { height: 100%; }
+body { background: var(--color-paper); color: var(--color-ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+textarea { field-sizing: content; }
+::selection { background: var(--color-brand-100); }
+.scroll-clean { scrollbar-width: none; }
+.scroll-clean::-webkit-scrollbar { display: none; }

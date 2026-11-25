@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Software Engineer Intern - Acme Robotics (mock Glassdoor-style job page)</title>
+<!-- Local test page for resume-agent: "Easy Apply" opens the application form in a new tab
+     (site-indeed-apply.html), which closes itself after submitting. No branding; nothing is sent anywhere. -->
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; color: #222; line-height: 1.5; }
+  .banner { background: #fff4d6; border: 1px solid #e8c66b; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+  .popup { position: fixed; right: 16px; bottom: 16px; width: 300px; background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 12px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+</style>
+</head>
+<body>
+<p class="banner">Local test page for resume-agent (mock job page). Nothing here is sent anywhere.</p>
+<h1>Software Engineer Intern</h1>
+<p><b>Acme Robotics</b> · 4.1 ★ · Singapore</p>
+<p><button id="easy">Easy Apply</button> <button>Save</button></p>
+<h3>Job description</h3>
+<p>You will build backend services and tools for our warehouse robots.</p>
+<ul>
+  <li>Currently pursuing a degree in Computer Engineering or Computer Science</li>
+  <li>Good command of Java or Python, and data structures and algorithms</li>
+  <li>Experience with Spring Boot, MySQL or Redis</li>
+</ul>
+<p id="status"></p>
+<div class="popup" id="alerts">
+  <b>Get job alerts</b>
+  <p style="font-size:13px">Get new jobs like this by email.</p>
+  <label style="font-size:13px">Email <input type="email" id="alertEmail"></label>
+  <p><button id="alertGo">Create job alert</button> <button id="alertClose" aria-label="Close">✕</button></p>
+</div>
+<script>
+  document.getElementById("easy").onclick = () => window.open("/fixtures/site-indeed-apply.html", "_blank");
+  document.getElementById("alertClose").onclick = () => (document.getElementById("alerts").style.display = "none");
+  document.getElementById("alertGo").onclick = () => { window.__alertCreated = true; document.getElementById("alerts").style.display = "none"; };
+  window.addEventListener("message", (e) => { if (e.data === "applied") document.getElementById("status").textContent = "Applied"; });
+</script>
+</body>
+</html>
