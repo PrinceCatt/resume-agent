@@ -10,3 +10,8 @@ data/
 tmp/
 *.log
 .DS_Store
+# Python backend (py/): its virtualenv and caches.
+py/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
