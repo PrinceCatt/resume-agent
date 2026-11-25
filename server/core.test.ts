@@ -976,3 +976,60 @@ test("re-reading a job with the same posting, profile and prompt does not call t
     saveSettings({ apiKey: "" });
   }
 });
+
+test("skill mode: an AI assistant's reading gets the same checks as DeepSeek's, without a key or a model call", async () => {
+  const { addJobs, getJob, jobJd, setJob, bgQueue, readPrompt, saveSkillReading, FIT_CONFLICT_CAP } = await import("./jobs.ts");
+  const { saveProfile, getProfile } = await import("./profile.ts");
+  const { saveSettings } = await import("./settings.ts");
+  const { saveSkillTailoring } = await import("./tailor.ts");
+  bgQueue.push = () => {};
+  const realFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async () => {
+    calls++;
+    return new Response("{}", { status: 500 });
+  }) as typeof fetch;
+  const before = getProfile();
+  try {
+    saveSettings({ apiKey: "", llmMode: "deepseek" });
+    saveProfile({
+      ...master,
+      answers: [{ id: "qa_jobtype", q: "What type of role?", a: "Full-time entry-level roles first; part-time internships second" }],
+    });
+    const [id] = addJobs({ urls: [], jdText: "Backend Intern at Acme, 6 months, full-time (40 hours a week). Requirements: Java, Spring Boot. ".repeat(2), autoApply: false }).ids;
+    setJob(id, { busy: null });
+
+    const p = await readPrompt(id);
+    assert.match(p.system, /Return JSON/i, "the prompt is the app's own reading prompt");
+    assert.match(p.input, /^CANDIDATE\n/, "the profile goes first, as in the app's call");
+    assert.match(p.input, /WHAT THE CANDIDATE IS LOOKING FOR/);
+
+    const jd = await saveSkillReading(id, {
+      title: "Backend Intern",
+      company: "Acme",
+      location: "Singapore",
+      summary: "后端实习",
+      requirements: ["Java", "Spring Boot"],
+      keywords: ["Java", "Spring Boot", "Java"],
+      facts: { type: "internship", hours: "full", months: 6, workAuth: "anyone" },
+      fit: { score: 90, verdict: "strong", strengths: ["Spring Boot project"], gaps: [] },
+    });
+    assert.equal(calls, 0, "no model was called");
+    assert.equal(jd.fit!.score, FIT_CONFLICT_CAP, "a full-time internship is capped for someone who wants part-time ones");
+    assert.ok(jd.fit!.conflict, "and the conflict is named");
+    assert.equal(jd.facts!.workAuth, "", "values outside the allowed set are dropped");
+    assert.deepEqual(jd.keywords, ["Java", "Spring Boot"], "keywords are de-duplicated");
+    assert.equal(jd.src, undefined, "a later read by the app's own model is not mistaken for this one");
+    const job = getJob(id)!;
+    assert.equal(job.stage, "parsed");
+    assert.equal(job.title, "Backend Intern");
+    assert.equal(jobJd(job)!.fit!.score, FIT_CONFLICT_CAP);
+
+    await assert.rejects(() => saveSkillReading(id, "not json"), /JSON/);
+    await assert.rejects(() => saveSkillReading(id, { location: "Singapore" }), /title/);
+    await assert.rejects(() => saveSkillTailoring(id, { summary: "no sections" }), /sections/);
+  } finally {
+    globalThis.fetch = realFetch;
+    saveProfile(before);
+  }
+});

@@ -369,11 +369,48 @@ export function trimPosting(text: string, url: string): string {
 }
 
 export async function parseJob(id: number) {
-  const job = getJob(id);
-  if (!job) return;
+  if (!getJob(id)) return;
   const ready = llmReady();
   if (!ready.ok) throw new Error(ready.reason);
+  const p = await readPrompt(id);
+  const { job, text, pageTitle, profile } = p;
+  const src = createHash("sha256").update(`${getSettings().model}\n${p.system}\n${p.input}`).digest("hex").slice(0, 20);
+  const prev = jobJd(job);
+  let jd: JobJd;
+  if (isDemo()) {
+    jd = mockExtractJob(text, job.url, pageTitle);
+    jd.fit = profile.sections.length ? mockFit(jd, profile) : null;
+  } else if (prev?.src === src) {
+    // Re-reading a job whose posting, profile and prompt are all unchanged would pay for the same answer
+    // again (three bulk re-reads were most of the 2026-11-13 bill). Its checks already ran on the same profile.
+    jd = prev;
+  } else {
+    jd = normalizeJd(await chatJson<JobJd>(p.system, p.input, 4096, { jobId: id, kind: "parse" }));
+    jd.src = src;
+  }
+  saveReading(id, p, jd, prev);
+}
 
+/**
+ * Skill mode: an AI assistant (Claude Code, Codex…) answered the reading prompt from `readPrompt` itself.
+ * Its answer goes through the same normalising and fit checks as the app's own DeepSeek call.
+ */
+export async function saveSkillReading(id: number, raw: unknown) {
+  if (!getJob(id)) throw new Error("岗位不存在");
+  if (!raw || typeof raw !== "object") throw new Error("要一个 JSON 对象（按读取提示词里的格式）");
+  const p = await readPrompt(id);
+  const jd = normalizeJd(raw);
+  if (!jd.title && !jd.requirements.length) throw new Error("JSON 里没有岗位内容：至少要有 title 和 requirements");
+  saveReading(id, p, jd, null);
+  return jd;
+}
+
+type ReadPrompt = Awaited<ReturnType<typeof readPrompt>>;
+
+/** What reading a job sends to the model; in skill mode it is handed to the AI assistant instead. */
+export async function readPrompt(id: number) {
+  const job = getJob(id);
+  if (!job) throw new Error("岗位不存在");
   let text = job.jd_text ?? "";
   let pageTitle = "";
   if (!text && job.url) {
@@ -391,20 +428,12 @@ export async function parseJob(id: number) {
   // CANDIDATE goes first: it is the same for every job, so after the first read DeepSeek serves the system
   // prompt and the profile from its cache (billed at about a tenth) and only the posting is new.
   const input = `CANDIDATE\n${candidate}\n\nURL: ${job.url}\nPage title: ${pageTitle}\n\nPOSTING\n${text.slice(0, 12_000)}`;
-  const src = createHash("sha256").update(`${getSettings().model}\n${EXTRACT_SYSTEM}\n${input}`).digest("hex").slice(0, 20);
-  const prev = jobJd(job);
-  let jd: JobJd;
-  if (isDemo()) {
-    jd = mockExtractJob(text, job.url, pageTitle);
-    jd.fit = profile.sections.length ? mockFit(jd, profile) : null;
-  } else if (prev?.src === src) {
-    // Re-reading a job whose posting, profile and prompt are all unchanged would pay for the same answer
-    // again (three bulk re-reads were most of the 2026-11-13 bill). Its checks already ran on the same profile.
-    jd = prev;
-  } else {
-    jd = normalizeJd(await chatJson<JobJd>(EXTRACT_SYSTEM, input, 4096, { jobId: id, kind: "parse" }));
-    jd.src = src;
-  }
+  return { job, text, pageTitle, profile, prefs, system: EXTRACT_SYSTEM, input };
+}
+
+/** Saves a reading of the job, whoever produced it (DeepSeek, demo mode, or an AI assistant in skill mode). */
+function saveReading(id: number, p: ReadPrompt, jd: JobJd, prev: JobJd | null) {
+  const { job, text, pageTitle, profile, prefs } = p;
   if (jd !== prev) {
     if (jd.fit && profile.sections.length) jd.fit = checkFit(jd.fit, profileText(profile), jd.keywords);
     jd.fit = capForPrefs(jd.fit, jd.facts, prefs);

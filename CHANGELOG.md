@@ -2,6 +2,8 @@
 
 ## 未发布 / Unreleased
 
+- skill 模式：`skills/resume-agent/` 是一个 Agent Skill，Claude Code 等 AI 助手可以操作投递助手；读岗位、改简历可以由助手自己做（不用 DeepSeek key），交回的结果照样过匹配度封顶和出处校验。/ Skill mode: an Agent Skill lets Claude Code and other assistants drive the app, and do the reading and tailoring themselves without a DeepSeek key; their answers pass the same checks.
+
 - README 加了截图（虚构的演示数据）。/ Screenshots in the README, made with made-up sample data.
 - 岗位详情的简历预览在笔记本屏幕上不再被切掉右边：整页按栏宽缩放。/ The resume preview on the job page is scaled to its column instead of being cut off on laptop screens.
 

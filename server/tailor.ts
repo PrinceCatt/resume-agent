@@ -269,27 +269,47 @@ export async function writeCoverLetter(id: number): Promise<{ file: string; text
 }
 
 export async function tailorJob(id: number) {
-  const job = getJob(id);
-  if (!job) return;
-  const jd = jobJd(job);
-  if (!jd) throw new Error("先解析岗位");
+  if (!getJob(id)) return;
   const ready = llmReady();
   if (!ready.ok) throw new Error(ready.reason);
+  const p = tailorPrompt(id);
+  const out: TailorOutput = isDemo() ? mockTailor(p.master, p.jd) : await chatJson<TailorOutput>(p.system, p.input, 6000, { jobId: id, kind: "tailor" });
+  await saveTailoring(id, p, out);
+}
+
+/** What tailoring sends to the model; in skill mode it is handed to the AI assistant instead. */
+export function tailorPrompt(id: number) {
+  const job = getJob(id);
+  if (!job) throw new Error("岗位不存在");
+  const jd = jobJd(job);
+  if (!jd) throw new Error("先解析岗位");
   const master = getProfile();
   if (!master.sections.length) throw new Error("资料库是空的：先到「资料库」填写或导入简历");
   const settings = getSettings();
   const lang = settings.resumeLanguage === "auto" ? jd.language : settings.resumeLanguage;
+  return {
+    job,
+    jd,
+    master,
+    system: tailorSystem(lang, wantsCoverLetter(settings.coverLetter, jd)),
+    // PROFILE first, the same in every tailoring call, so DeepSeek can serve it from its cache.
+    input: `PROFILE\n${profileForPrompt(master, { withIds: true })}\n\nEXTRA FACTS\n${master.extraFacts || "(none)"}\n\nJOB POSTING\nTitle: ${jd.title}\nCompany: ${jd.company}\nLocation: ${jd.location}\nRequirements:\n- ${jd.requirements.join("\n- ")}\nNice to have:\n- ${jd.niceToHave.join("\n- ")}\nKeywords: ${jd.keywords.join(", ")}${coverAsk(jd)}\n\nFull text:\n${trimPosting(job.jd_text ?? "", job.url).slice(0, 8000)}`,
+  };
+}
 
-  const out: TailorOutput = isDemo()
-    ? mockTailor(master, jd)
-    : await chatJson<TailorOutput>(
-        tailorSystem(lang, wantsCoverLetter(settings.coverLetter, jd)),
-        // PROFILE first, the same in every tailoring call, so DeepSeek can serve it from its cache.
-        `PROFILE\n${profileForPrompt(master, { withIds: true })}\n\nEXTRA FACTS\n${master.extraFacts || "(none)"}\n\nJOB POSTING\nTitle: ${jd.title}\nCompany: ${jd.company}\nLocation: ${jd.location}\nRequirements:\n- ${jd.requirements.join("\n- ")}\nNice to have:\n- ${jd.niceToHave.join("\n- ")}\nKeywords: ${jd.keywords.join(", ")}${coverAsk(jd)}\n\nFull text:\n${trimPosting(job.jd_text ?? "", job.url).slice(0, 8000)}`,
-        6000,
-        { jobId: id, kind: "tailor" },
-      );
+/**
+ * Skill mode: an AI assistant answered the tailoring prompt itself. The answer goes through the same
+ * source check (`assemble`) as DeepSeek's: unsourced bullets are dropped, new numbers and tools are flagged.
+ */
+export async function saveSkillTailoring(id: number, raw: unknown) {
+  if (!raw || typeof raw !== "object" || !Array.isArray((raw as TailorOutput).sections)) throw new Error("要一个 JSON 对象，至少有 sections（按改简历提示词里的格式）");
+  const p = tailorPrompt(id);
+  await saveTailoring(id, p, raw as TailorOutput);
+  return parseJson<Tailored>(getJob(id)!.tailored, null as never);
+}
 
+async function saveTailoring(id: number, p: ReturnType<typeof tailorPrompt>, out: TailorOutput) {
+  const { job, jd, master } = p;
   const built = assemble(master, out, jd);
   const tailored: Tailored = {
     doc: built.doc,

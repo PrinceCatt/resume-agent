@@ -69,6 +69,30 @@ pnpm install
 - 网站弹出「Just a moment…」这类人机验证时会停下，等你自己在那个标签页上过；不会去绕过。
 - 只关自己开的标签页（填完、放弃时），不碰你自己的标签页；断开连接也不会关你的浏览器。
 
+## 在 AI 助手里用（skill 模式）/ Use it from an AI assistant
+
+`skills/resume-agent/` 是一个 Agent Skill（`SKILL.md` 格式）：装进 Claude Code（或其他支持 Agent Skills 的助手）之后，直接说「把这个岗位加进投递助手，看看匹配度，改一版简历」就行。助手通过 `skills/resume-agent/scripts/ra.mjs` 操作本机正在运行的投递助手（加岗位、看匹配度、改简历、开始投递、回答填表时的问题、看待确认的申请）。
+
+- **不用 DeepSeek key 也能用**：读岗位和改简历可以由 AI 助手自己做——它拿到投递助手本来要发给 DeepSeek 的同一份提示词，自己回答，交回 JSON；投递助手照样做和 DeepSeek 一样的检查（匹配度冲突封顶、简历的出处校验：编造的数字改回原文、找不到出处的要点和资料库没有的技能去掉），再出 PDF。
+- **提交仍然要你点头**：确认提交的命令必须带 `--user-confirmed`，skill 里写明了只有你明确同意了这一份才能加；密码、验证码、登录照旧交给你。
+- 填表还是投递助手自己的 agent 在你的 Edge 里做（要 DeepSeek key 或演示模式）。
+
+安装（先启动投递助手）：
+
+```powershell
+# Windows：在 Claude Code 的 skills 文件夹里建一个指向本项目的链接（目录联接，不需要管理员）
+New-Item -ItemType Junction -Path "$HOME\.claude\skills\resume-agent" -Target "<项目路径>\skills\resume-agent"
+```
+
+```bash
+# macOS / Linux
+ln -s "<项目路径>/skills/resume-agent" ~/.claude/skills/resume-agent
+```
+
+其他支持 Agent Skills 的助手：把 `skills/resume-agent` 放到它读取 skills 的文件夹。投递助手不在默认地址时设 `RESUME_AGENT_URL`（默认 `http://127.0.0.1:8791`）。命令一览：`node skills/resume-agent/scripts/ra.mjs help`。
+
+**English.** `skills/resume-agent/` is an Agent Skill for Claude Code and other assistants that read the Agent Skills format. The assistant drives the running app through `scripts/ra.mjs`. Without a DeepSeek key it can do the reading and tailoring itself: it answers the app's own prompts and the app applies the same checks it applies to DeepSeek (fit caps, the resume's source check), then renders the PDF. Submitting still needs your explicit yes (`confirm … --user-confirmed`).
+
 ## 招聘网站
 
 任何网站都按通用方式填（看页面、填表、到最终提交前停下）。新加坡常用的几个另外带了「这个网站的流程一般怎么走」的提示，打开这个网站的页面时加给模型：
@@ -115,6 +139,7 @@ pnpm install
 
 ## 结构
 
+- `skills/resume-agent/` — Agent Skill（`SKILL.md` + 命令行 `scripts/ra.mjs`），服务端对应 `/api/skill/*`
 - `server/agent.ts` — 填表 agent：看页面 → DeepSeek 工具调用 → 执行；`isFinalSubmit` 是提交拦截
 - `server/tailor.ts` — 改简历 + 出处校验（`assemble`）
 - `server/observe.ts` — 页面快照（所有 frame、表单控件、按钮）

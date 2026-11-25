@@ -5,11 +5,11 @@ import { FILES_DIR, parseJson, run, SHOTS_DIR, sqlNow } from "./db.ts";
 import { addClient, emit } from "./events.ts";
 import { getSettings, publicSettings, saveSettings, type Settings } from "./settings.ts";
 import { COMMON_QUESTIONS, getProfile, newId, normalizeProfile, pdfText, saveProfile } from "./profile.ts";
-import { addJobs, getJob, jobJd, listJobs, pipelineHooks, PROGRESS, progressLog, queueParse, setJob, type JobRow, type Progress } from "./jobs.ts";
+import { addJobs, getJob, jobJd, listJobs, pipelineHooks, PROGRESS, progressLog, queueParse, readPrompt, saveSkillReading, setJob, type JobRow, type Progress } from "./jobs.ts";
 import { addEvent, deleteEvent, EVENT_LABEL, getEvent, icsFor, listEvents, nextEvent, updateEvent } from "./schedule.ts";
 import { DRAFT_KINDS, draftsView, makeDraft, prepState, prepView, queuePrep, type DraftKind } from "./prep.ts";
 import { askedQuestions, stats } from "./stats.ts";
-import { coverage, profileHas, queueTailor, renderJobFiles, writeCoverLetter, type Tailored } from "./tailor.ts";
+import { coverage, profileHas, queueTailor, renderJobFiles, saveSkillTailoring, tailorPrompt, writeCoverLetter, type Tailored } from "./tailor.ts";
 import { focusRun, getRun, isLive, listRuns, liveShotName, reply, runSteps, similarity, startRun, type UserReply } from "./agent.ts";
 import { browserOpen, browserState, closeAll, EXTENSION_URL, newVisiblePage, reconnect } from "./browser.ts";
 import { resumeHtml, type ResumeDoc } from "./render.ts";
@@ -492,6 +492,41 @@ app.post(
 app.post(
   "/api/jobs/:id/cover-letter",
   wrap(async (req) => ({ text: (await writeCoverLetter(idOf(req))).text })),
+);
+// Skill mode: an AI assistant (Claude Code, Codex…) does the model's work instead of DeepSeek. It asks for the
+// exact prompt the app would send, answers it itself, and posts the JSON back; the server then runs the same
+// checks as for DeepSeek's answers (fit caps, the resume's source check, the PDF). POST so that a web page
+// cannot set it off (the origin check above only guards writes). See skills/resume-agent/SKILL.md.
+app.post(
+  "/api/skill/jobs/:id/read-prompt",
+  wrap(async (req) => {
+    const p = await readPrompt(idOf(req));
+    // Keep the posting that was read, so the answer is checked against the same text.
+    setJob(idOf(req), { jd_text: p.text, held: null });
+    return { system: p.system, input: p.input };
+  }),
+);
+app.post(
+  "/api/skill/jobs/:id/read",
+  wrap(async (req) => {
+    await saveSkillReading(idOf(req), req.body);
+    return jobView(getJob(idOf(req))!);
+  }),
+);
+app.post(
+  "/api/skill/jobs/:id/tailor-prompt",
+  wrap((req) => {
+    const p = tailorPrompt(idOf(req));
+    return { system: p.system, input: p.input };
+  }),
+);
+app.post(
+  "/api/skill/jobs/:id/tailor",
+  wrap(async (req) => {
+    const t = await saveSkillTailoring(idOf(req), req.body);
+    const j = getJob(idOf(req))!;
+    return { notes: t.notes, warnings: t.warnings, coverage: t.coverage, resumeFile: j.resume_file, coverFile: j.cover_file };
+  }),
 );
 app.post(
   "/api/jobs/:id/apply",
