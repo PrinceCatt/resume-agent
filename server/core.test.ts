@@ -284,16 +284,22 @@ test("questions the agent asked show up until they are answered in the profile",
     autoApply: false,
   }).ids;
   const { id: runId } = run("INSERT INTO runs (job_id, status) VALUES (?, 'finished')", jobId);
-  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'ask', ?)", runId, "问你：What is your notice period?");
-  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'note', ?)", runId, "你的回答：Immediately（已记入资料库）");
-  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'ask', ?)", runId, "问你：Do you have a driving licence?");
+  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'ask', ?)", runId, "Question for you: What is your notice period?");
+  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'note', ?)", runId, "Your answer: Immediately (saved to your profile)");
+  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'ask', ?)", runId, "Question for you: Do you have a driving licence?");
+  // Steps as the Chinese edition wrote them, in a data folder shared with it.
+  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'ask', ?)", runId, "问你：Are you willing to relocate?");
+  run("INSERT INTO run_steps (run_id, kind, text) VALUES (?, 'note', ?)", runId, "你的回答：No（已记入资料库）");
   const open = askedQuestions(similarity, [{ q: "What is your notice period?", a: "" }]);
   assert.deepEqual(
     open.map((a) => `${a.q} = ${a.a}`).sort(),
-    ["Do you have a driving licence? = ", "What is your notice period? = Immediately"],
+    ["Are you willing to relocate? = No", "Do you have a driving licence? = ", "What is your notice period? = Immediately"],
     "an empty saved answer still counts as open",
   );
-  const left = askedQuestions(similarity, [{ q: "What is your notice period?", a: "Immediately" }]);
+  const left = askedQuestions(similarity, [
+    { q: "What is your notice period?", a: "Immediately" },
+    { q: "Are you willing to relocate?", a: "No" },
+  ]);
   assert.deepEqual(
     left.map((a) => a.q),
     ["Do you have a driving licence?"],
@@ -350,15 +356,15 @@ test("a fit strength crediting a missing tool is marked", async () => {
     {
       score: 88,
       verdict: "",
-      strengths: ["有 ROS 机器人项目经验", "熟悉 Java"],
+      strengths: ["Experience with ROS robotics projects", "Knows Java"],
       gaps: [],
     },
     profileText(master),
     jd.keywords,
   );
   assert.deepEqual(fit.unsupported, ["ROS"]);
-  assert.equal(fit.strengths[0], "有 ROS 机器人项目经验（资料库里没找到：ROS）");
-  assert.equal(fit.strengths[1], "熟悉 Java");
+  assert.equal(fit.strengths[0], "Experience with ROS robotics projects (not in your profile: ROS)");
+  assert.equal(fit.strengths[1], "Knows Java");
 });
 
 test("a tool counts when the profile writes it another way or with a version", async () => {
@@ -386,7 +392,7 @@ test("prep flags are worked out when read, so adding the fact to the profile cle
   };
   const before = prepView(saved, master, jd)!;
   assert.equal(before.questions[0].points[0].kind, "unsure");
-  assert.deepEqual(before.pitchWarnings, ["提到了 ROS，资料库里没有"]);
+  assert.deepEqual(before.pitchWarnings, ["Mentions ROS, which is not in your profile"]);
   const withRos = normalizeProfile({
     ...master,
     skills: [...master.skills, { id: "sk2", label: "Robotics", items: ["Robot Operating System"] }],
@@ -562,7 +568,7 @@ test("job search: MyCareersFuture results name the real employer and hide hidden
   assert.equal(out.length, 2);
   assert.equal(out[0].title, "Software Engineer");
   assert.equal(out[0].company, "ACME ROBOTICS PTE. LTD.");
-  assert.equal(out[0].salary, "S$4000–5500/月");
+  assert.equal(out[0].salary, "S$4000–5500/month");
   assert.equal(out[0].location, "Central");
   assert.equal(out[1].company, "BETA PTE. LTD.");
   assert.equal(out[1].salary, "");
@@ -756,7 +762,7 @@ test("a fit that clashes with what the candidate wants is capped, only when the 
   const fullIntern = normalizeFacts({ type: "internship", hours: "full", months: 6 });
   const clash = normalizeFit(fit("fulltime_internship"), fullIntern)!;
   assert.equal(clash.score, FIT_CONFLICT_CAP);
-  assert.match(clash.conflict ?? "", /全职实习/);
+  assert.match(clash.conflict ?? "", /Full-time internship/);
   assert.equal(normalizeFit(fit("fulltime_internship", 30), fullIntern)!.score, 30, "a lower score stays");
   const job = normalizeFacts({ type: "fulltime", hours: "full" });
   const madeUp = normalizeFit(fit("graduates_only"), job)!;
@@ -764,7 +770,7 @@ test("a fit that clashes with what the candidate wants is capped, only when the 
   assert.ok(!("conflict" in madeUp));
   assert.equal(normalizeFit(fit("graduates_only"), normalizeFacts({ type: "fulltime", student: "graduated" }))!.score, FIT_CONFLICT_CAP);
   assert.equal(normalizeFit(fit("fulltime_internship"), normalizeFacts({ type: "internship" }))!.score, 78, "hours not stated: no clash");
-  assert.equal(normalizeFit(fit("全职岗位，你还没毕业"), job)!.score, 78, "free text is not a kind");
+  assert.equal(normalizeFit(fit("Full-time role, and you have not graduated yet"), job)!.score, 78, "free text is not a kind");
   assert.ok(!("conflict" in normalizeFit(fit(""), job)!));
 });
 
@@ -778,7 +784,7 @@ test("a full-time internship is capped for someone who wants part-time ones, eve
   assert.equal(capForPrefs(fit, normalizeFacts({ type: "fulltime", hours: "full" }), prefs)!.score, 88, "a full-time job is not an internship");
   assert.equal(capForPrefs(fit, full, "- Role: part-time or full-time internships")!.score, 88, "full-time internships accepted too");
   assert.equal(capForPrefs(fit, full, "")!.score, 88);
-  const named = { ...fit, score: 40, conflict: "只招已经毕业的" };
+  const named = { ...fit, score: 40, conflict: "Graduates only" };
   assert.equal(capForPrefs(named, full, prefs), named, "an existing conflict is kept as it is");
 });
 
@@ -863,7 +869,7 @@ test("batch tailoring waits for off-peak and a free slot; a job you push goes no
 
   hold(a);
   runNow([a]);
-  assert.equal(getJob(a)!.busy, "tailoring", "现在就跑 skips the wait whatever the time");
+  assert.equal(getJob(a)!.busy, "tailoring", "Run now skips the wait whatever the time");
 
   hold(b, { stage: "skipped" });
   pump(peak);
@@ -909,7 +915,7 @@ test("costs are priced by the time of each call; an empty balance stops calls be
     const [id] = addJobs({ urls: [], jdText: "Data Analyst at Example. SQL and Python required. ".repeat(3), autoApply: false }).ids;
     let calls = 0;
     globalThis.fetch = (async () => (calls++, new Response("{}", { status: 500 }))) as typeof fetch;
-    await assert.rejects(parseJob(id), /余额不足/);
+    await assert.rejects(parseJob(id), /balance is too low/);
     assert.equal(calls, 0, "no call is made while the balance is empty");
     assert.equal(getJob(id)!.jd, null);
   } finally {

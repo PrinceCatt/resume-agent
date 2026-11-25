@@ -18,7 +18,7 @@ export type JobJd = {
   title: string;
   company: string;
   location: string;
-  /** Two or three sentences in Chinese, for the list view. */
+  /** Two or three sentences in English, for the list view. */
   summary: string;
   requirements: string[];
   niceToHave: string[];
@@ -101,9 +101,9 @@ export type JobRow = {
 export const bgQueue = makeQueue(() => 2);
 
 // The queue lives in memory, so a restart drops whatever was reading or tailoring. Without this the job
-// showed "读取岗位中" for good, with no button to try again.
+// showed "Reading job" for good, with no button to try again.
 run(
-  "UPDATE jobs SET error = CASE busy WHEN 'parsing' THEN '程序重启，读取中断了，再点一次' ELSE '程序重启，改简历中断了，再点一次' END, busy = NULL WHERE busy IS NOT NULL",
+  "UPDATE jobs SET error = CASE busy WHEN 'parsing' THEN 'The app restarted while reading this job; click again' ELSE 'The app restarted while tailoring the resume; click again' END, busy = NULL WHERE busy IS NOT NULL",
 );
 
 export function getJob(id: number) {
@@ -279,15 +279,15 @@ export async function fetchPostingText(url: string) {
   let keep = false;
   try {
     const got = await readPage(vis);
-    const name = site?.name ?? "这个网站";
+    const name = site?.name ?? "The site";
     // Never save a check page or a sign-in wall as the posting. The tab stays open for you to deal with.
     if (isCheckPage(got.title, got.text)) {
       keep = true;
-      throw new Error(`${name}打开时出现了人机验证：浏览器里已经开着这个岗位的标签页，你自己过一下验证，再点「重新读取岗位」。`);
+      throw new Error(`${name} showed a bot check: the job is open in a tab of your browser. Pass the check yourself, then click "Re-read job".`);
     }
     if (LOGIN_WALL.test(got.text.slice(0, 3000))) {
       keep = true;
-      throw new Error(`${name}要先登录才能看：在浏览器里开着的那个标签页上登录后，再点「重新读取岗位」。`);
+      throw new Error(`${name} needs you to sign in first: sign in on the tab open in your browser, then click "Re-read job".`);
     }
     return got;
   } finally {
@@ -298,7 +298,7 @@ export async function fetchPostingText(url: string) {
 
 const EXTRACT_SYSTEM = `You read job postings. Return JSON with exactly these keys:
 {"title": string, "company": string, "location": string,
- "summary": string (2-3 sentences in Simplified Chinese: what the role does and who it wants),
+ "summary": string (2-3 sentences in English: what the role does and who it wants),
  "requirements": string[] (must-haves, short, in the posting's language),
  "niceToHave": string[],
  "keywords": string[] (8-20 concrete skills/tools/domains a recruiter or ATS would scan for, as written in the posting),
@@ -318,7 +318,7 @@ const EXTRACT_SYSTEM = `You read job postings. Return JSON with exactly these ke
    "workplace": "onsite"|"hybrid"|"remote"|""},
  "fit": {"score": integer 0-100, "verdict": string, "strengths": string[], "gaps": string[], "conflict": "fulltime_internship"|"start_date"|"graduates_only"|"work_auth"|""} | null}
 "facts" come only from the posting text: never guess; use ""/null/[] when it does not say.
-"fit" compares the posting with CANDIDATE. Be strict and honest, like a recruiter screening: score how well the candidate meets the MUST-haves (level, years of experience, degree, required skills, work authorization if stated); nice-to-haves only move it a little. A student applying to a role that requires several years of experience scores low. verdict: one sentence in Simplified Chinese on whether it is worth applying. strengths/gaps: up to 4 short points each in Simplified Chinese, citing concrete items from the posting and the candidate. A strength may only name skills, tools and experience written in CANDIDATE; something the posting wants that CANDIDATE does not mention is a gap, never a strength, and it must not raise the score. Use null if there is no candidate profile.
+"fit" compares the posting with CANDIDATE. Be strict and honest, like a recruiter screening: score how well the candidate meets the MUST-haves (level, years of experience, degree, required skills, work authorization if stated); nice-to-haves only move it a little. A student applying to a role that requires several years of experience scores low. verdict: one sentence in English on whether it is worth applying. strengths/gaps: up to 4 short points each in English, citing concrete items from the posting and the candidate. A strength may only name skills, tools and experience written in CANDIDATE; something the posting wants that CANDIDATE does not mention is a gap, never a strength, and it must not raise the score. Use null if there is no candidate profile.
 When CANDIDATE includes WHAT THE CANDIDATE IS LOOKING FOR, also check the posting against it, and judge internships and full-time jobs separately:
 - Internship: if the candidate wants part-time internships, an internship with full-time hours (full-time, 5 days a week, 40 hours) is a clear conflict however well the dates fit: it goes first in gaps, the verdict must not call it a match with what they want, and the score is 45 or lower. An internship for enrolled students that starts after their graduation date is a conflict too. If the hours are not stated, say in gaps that the hours need checking, without lowering the score much.
 - Full-time job: one they would start after graduating. Graduating later is not a conflict unless the posting states a start date before the graduation date or requires the degree to be completed already. A wish for part-time internships is about internships only and never lowers a full-time job's score.
@@ -383,7 +383,7 @@ export async function parseJob(id: number) {
   }
   // Stored as trimmed too, so tailoring and interview prep read the same short text.
   text = trimPosting(text, job.url);
-  if (text.trim().length < 80) throw new Error("没读到岗位内容：页面可能要登录，在你的浏览器里登录该网站后再点「重新读取岗位」，或直接粘贴 JD 文本。");
+  if (text.trim().length < 80) throw new Error("Could not read the posting: the page may need a sign-in. Sign in to the site in your browser, then click \"Re-read job\", or paste the JD text instead.");
 
   const profile = getProfile();
   const prefs = searchPrefs(profile);
@@ -418,7 +418,7 @@ export async function parseJob(id: number) {
     location: jd.location || null,
     stage: job.stage === "new" ? "parsed" : job.stage,
     busy: null,
-    error: jd.closed ? "页面显示这个岗位已关闭" : null,
+    error: jd.closed ? "The page says this job is closed" : null,
   });
 }
 
@@ -466,10 +466,10 @@ export function normalizeFacts(raw: any): JobFacts | null {
 
 /** The conflicts that cap a fit, each with the posting condition that must back it up. */
 const CONFLICTS: Record<string, { label: string; backed: (f: JobFacts) => boolean }> = {
-  fulltime_internship: { label: "全职实习，和你想找的兼职实习不符", backed: (f) => f.type === "internship" && f.hours === "full" },
-  start_date: { label: "开始时间对不上你的时间", backed: (f) => !!f.start },
-  graduates_only: { label: "只招已经毕业的", backed: (f) => f.student === "graduated" },
-  work_auth: { label: "只招公民 / PR", backed: (f) => !!f.workAuth },
+  fulltime_internship: { label: "Full-time internship; you want part-time ones", backed: (f) => f.type === "internship" && f.hours === "full" },
+  start_date: { label: "Start date does not fit your dates", backed: (f) => !!f.start },
+  graduates_only: { label: "Graduates only", backed: (f) => f.student === "graduated" },
+  work_auth: { label: "Citizens / PR only", backed: (f) => !!f.workAuth },
 };
 
 /** Their wishes name part-time internships and do not also accept full-time ones. */
@@ -507,7 +507,7 @@ export function checkFit(fit: Fit, profile: string, keywords: string[]): Fit {
   const strengths = fit.strengths.map((st) => {
     const missing = unsupportedTerms(st, profile, keywords);
     missing.forEach((t) => unsupported.add(t));
-    return missing.length ? `${st}（资料库里没找到：${missing.join("、")}）` : st;
+    return missing.length ? `${st} (not in your profile: ${missing.join(", ")})` : st;
   });
   return { ...fit, strengths, unsupported: [...unsupported] };
 }

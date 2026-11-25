@@ -47,11 +47,11 @@ function friendly(e: unknown): string {
   const msg = String((e as Error)?.message ?? e);
   const which = getSettings().browserChannel === "chrome" ? "Chrome" : "Edge";
   if (/Playwright Extension not found/i.test(msg))
-    return `你的 ${which} 里还没装 Playwright Extension（在 Chrome 应用商店里，商店页面上有时叫 Playwright MCP Bridge；Edge 自己的扩展商店里没有）：在 ${which} 里打开设置页给的链接安装（Edge 会问是否允许来自其他商店的扩展，选允许），装好后再点「连接」。`;
+    return `The Playwright Extension is not installed in your ${which} yet (it is in the Chrome Web Store, where the page sometimes calls it Playwright MCP Bridge; Edge's own add-on store does not have it). Open the link on the Settings page in ${which} to install it (Edge asks whether to allow extensions from other stores: choose Allow), then click "Connect" again.`;
   if (/did not connect within/i.test(msg))
-    return `${which} 里的 Playwright 扩展 30 秒内没连上：设置里填的令牌要和扩展状态页（点工具栏里它的图标）上显示的一样；不确定就清空令牌，改成每次在 ${which} 里点允许。`;
-  if (/executable not found|Unsupported channel/i.test(msg)) return `这台电脑上找不到 ${which}。`;
-  return `连不上你的 ${which}：${msg.split("\n")[0]}`;
+    return `The Playwright extension in ${which} did not connect within 30 seconds. The token in Settings must match the one on the extension's status page (click its icon in the toolbar); if unsure, clear the token and click Allow in ${which} each time instead.`;
+  if (/executable not found|Unsupported channel/i.test(msg)) return `${which} was not found on this computer.`;
+  return `Could not connect to your ${which}: ${msg.split("\n")[0]}`;
 }
 
 function startConnect(): Promise<Conn> {
@@ -66,7 +66,7 @@ function startConnect(): Promise<Conn> {
   const p: Promise<Conn> = tools
     .createBrowserWithInfo(
       { browser: { browserName: "chromium", launchOptions: {}, contextOptions: {} }, extension: true, tabGroup: true, background: false },
-      { clientName: "投递助手" },
+      { clientName: "Resume Agent" },
       { browser: s.browserChannel },
       { title: "resume-agent" },
     )
@@ -80,7 +80,7 @@ function startConnect(): Promise<Conn> {
         throw new Error("superseded");
       }
       const ctx = browser.contexts()[0];
-      if (!ctx) throw new Error("扩展连上了，但没有可用的标签页");
+      if (!ctx) throw new Error("The extension connected, but there is no tab to use");
       browser.on("disconnected", () => {
         if (conn?.browser !== browser) return;
         conn = null;
@@ -98,7 +98,7 @@ function startConnect(): Promise<Conn> {
         lastError = friendly(e);
         emit("browser");
       }
-      throw new Error(my === attempt ? lastError : "已经换成新的连接");
+      throw new Error(my === attempt ? lastError : "Replaced by a newer connection");
     });
   p.catch(() => {});
   connecting = p;
@@ -114,7 +114,7 @@ export async function getContext(waitMs = 180_000): Promise<BrowserContext> {
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
       const which = getSettings().browserChannel === "chrome" ? "Chrome" : "Edge";
-      reject(new Error(`还没连上你的 ${which}：在 ${which} 里打开的 Playwright 连接页上点允许（或在设置里填扩展的令牌），然后再试。`));
+      reject(new Error(`Not connected to your ${which} yet: click Allow on the Playwright connection page that opened in ${which} (or enter the extension token in Settings), then try again.`));
     }, waitMs);
   });
   try {

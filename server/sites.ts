@@ -26,7 +26,7 @@ export const SITES: Site[] = [
     name: "LinkedIn",
     match: /^https?:\/\/([a-z]+\.)?linkedin\.com\//i,
     login: "https://www.linkedin.com/login",
-    note: "Easy Apply 在 LinkedIn 里填完；只有「Apply」的会跳到公司官网，按那边的表单填。",
+    note: "Easy Apply is filled in on LinkedIn; jobs with only \"Apply\" go to the company's site and its own form.",
     visibleOnly: false,
     playbook: `LinkedIn
 - Signed out (the header shows "Sign in" / "Join now", or a sign-in form/modal appears): call need_manual asking the candidate to sign in to LinkedIn in this window.
@@ -44,7 +44,7 @@ export const SITES: Site[] = [
     name: "JobStreet",
     match: /^https?:\/\/([a-z]+\.)?jobstreet\.com(\.[a-z]+)?\//i,
     login: "https://sg.jobstreet.com/",
-    note: "「Quick apply」在 JobStreet 里填完。没登录或打开时出现人机验证，助手会停下来让你在它的窗口里处理。",
+    note: "\"Quick apply\" is filled in on JobStreet. When you are signed out or a bot check appears, the agent stops and lets you deal with it in its window.",
     visibleOnly: true,
     playbook: `JobStreet
 - Signed out (a "Sign in" button in the header, or the apply page asks you to sign in or create an account): call need_manual asking the candidate to sign in to JobStreet in this window.
@@ -60,7 +60,7 @@ export const SITES: Site[] = [
     name: "Glassdoor",
     match: /^https?:\/\/([a-z]+\.)?glassdoor\.[a-z.]+\//i,
     login: "https://www.glassdoor.sg/profile/login_input.htm",
-    note: "「Easy Apply」会转到 Indeed 的申请表（Glassdoor 和 Indeed 是一家）；其余跳公司官网。常有人机验证，要你自己过。",
+    note: "\"Easy Apply\" goes to Indeed's application form (Glassdoor and Indeed are one company); others go to the company's site. Bot checks are common, and you pass them yourself.",
     visibleOnly: true,
     playbook: `Glassdoor
 - Signed out (a sign-in wall or "Sign in" prompt): call need_manual asking the candidate to sign in to Glassdoor in this window.
@@ -72,7 +72,7 @@ export const SITES: Site[] = [
     name: "Indeed",
     match: /^https?:\/\/([a-z]+\.)?indeed\.com\/|^https?:\/\/smartapply\.indeed\.com\//i,
     login: "https://secure.indeed.com/auth",
-    note: "「Apply now」在 Indeed 里填完，Glassdoor 的 Easy Apply 也是这张表。登录常要邮箱验证码，要你自己输。",
+    note: "\"Apply now\" is filled in on Indeed; Glassdoor's Easy Apply uses the same form. Signing in often needs an email code, which you enter yourself.",
     visibleOnly: true,
     playbook: `Indeed (also the form behind Glassdoor "Easy Apply")
 - Signed out, or asked for an email/one-time code: call need_manual (the candidate enters codes themselves).
@@ -85,7 +85,7 @@ export const SITES: Site[] = [
     name: "MyCareersFuture",
     match: /^https?:\/\/([a-z]+\.)?mycareersfuture\.gov\.sg\//i,
     login: "https://www.mycareersfuture.gov.sg/",
-    note: "投递要用 Singpass 登录，扫码这一步要你自己来；登录后助手接着填。",
+    note: "Applying needs a Singpass login; you scan the code yourself, then the agent carries on.",
     visibleOnly: false,
     playbook: `MyCareersFuture (Singapore government job portal)
 - Applying needs a Singpass login: when the page asks to log in, call need_manual asking the candidate to log in with Singpass in this window. Never try to fill Singpass yourself.

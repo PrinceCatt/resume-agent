@@ -107,8 +107,8 @@ async function searchLinkedIn(q: string, spec: SearchSpec): Promise<Omit<FoundJo
       headers: { "user-agent": UA, "accept-language": "en-US,en;q=0.9" },
       signal: AbortSignal.timeout(20_000),
     });
-    if (r.status === 429) throw new Error("LinkedIn 暂时不让搜了（请求太频繁），过几分钟再试");
-    if (!r.ok) throw new Error(`LinkedIn 搜索出错（${r.status}）`);
+    if (r.status === 429) throw new Error("LinkedIn is refusing searches for now (too many requests); try again in a few minutes");
+    if (!r.ok) throw new Error(`LinkedIn search failed (${r.status})`);
     const cards = parseLinkedInCards(await r.text());
     out.push(...cards);
     if (cards.length < 10) break;
@@ -124,7 +124,7 @@ export function mapMcf(results: any[]): Omit<FoundJob, "existingId">[] {
       const s = r.salary;
       const salary =
         s && (s.minimum || s.maximum) && !r.metadata.isHideSalary
-          ? `S$${s.minimum ?? "?"}–${s.maximum ?? "?"}${s.type?.salaryType === "Monthly" ? "/月" : ""}`
+          ? `S$${s.minimum ?? "?"}–${s.maximum ?? "?"}${s.type?.salaryType === "Monthly" ? "/month" : ""}`
           : "";
       const company = (r.metadata.isPostedOnBehalf && !r.metadata.isHideHiringEmployerName && r.hiringCompany?.name) || r.postedCompany?.name || "";
       const location = (r.address?.districts?.[0]?.location as string) || (Array.isArray(r.address) ? r.address[0]?.location : "") || "Singapore";
@@ -156,7 +156,7 @@ async function searchMcf(q: string, spec: SearchSpec): Promise<Omit<FoundJob, "e
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(20_000),
   });
-  if (!r.ok) throw new Error(`MyCareersFuture 搜索出错（${r.status}）`);
+  if (!r.ok) throw new Error(`MyCareersFuture search failed (${r.status})`);
   const j = (await r.json()) as { results?: any[] };
   const since = new Date(Date.now() - spec.days * 86_400_000).toISOString().slice(0, 10);
   return mapMcf(j.results ?? []).filter((f) => (!f.posted || f.posted >= since) && relevantTitle(f.title, q));

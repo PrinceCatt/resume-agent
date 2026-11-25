@@ -15,14 +15,14 @@ const KNOWN: Array<[RegExp, string]> = [
   [/(^|\.)indeed\./, "Indeed"],
   [/(^|\.)glassdoor\./, "Glassdoor"],
   [/(^|\.)jobstreet\./, "JobStreet"],
-  [/zhipin\.com$/, "BOSS直聘"],
-  [/nowcoder\.com$/, "牛客"],
-  [/^(localhost|127\.0\.0\.1)$/, "本地测试页"],
+  [/zhipin\.com$/, "BOSS Zhipin"],
+  [/nowcoder\.com$/, "Nowcoder"],
+  [/^(localhost|127\.0\.0\.1)$/, "Local test page"],
 ];
 
 /** Where a posting lives: a known job board by name, otherwise the site's own name. */
 export function siteOf(url: string) {
-  if (!url) return "粘贴的 JD";
+  if (!url) return "Pasted JD";
   try {
     const h = new URL(url).hostname.replace(/^www\./, "");
     for (const [re, name] of KNOWN) if (re.test(h)) return name;
@@ -30,7 +30,7 @@ export function siteOf(url: string) {
     const twoPart = parts.length >= 3 && /^(com|gov|edu|org|net|co|ac)$/.test(parts[parts.length - 2]);
     return parts[parts.length - (twoPart ? 3 : 2)] ?? h;
   } catch {
-    return "其他";
+    return "Other";
   }
 }
 
@@ -56,7 +56,7 @@ export function stats() {
   let matureReplied = 0;
   let ended = 0;
   const replyDays: number[] = [];
-  const fit = [bucket("high", "70 分以上"), bucket("mid", "50–69 分"), bucket("low", "50 分以下"), bucket("none", "没有评分")];
+  const fit = [bucket("high", "70 and up"), bucket("mid", "50–69"), bucket("low", "Below 50"), bucket("none", "No score")];
   const sites = new Map<string, Bucket>();
 
   const WEEKS = 10;
@@ -135,21 +135,36 @@ export function stats() {
   };
 }
 
+/** How the agent records a question it asked you, and your answer, in a run's steps. */
+export const ASKED = "Question for you: ";
+export const ANSWERED = "Your answer: ";
+export const SAVED = " (saved to your profile)";
+// The same steps as the Chinese edition wrote them, so questions asked before switching still count.
+const ASKED_ZH = "问你：";
+const ANSWERED_ZH = "你的回答：";
+const SAVED_ZH = "（已记入资料库）";
+const unprefix = (t: string, ps: string[]) => t.slice(ps.find((p) => t.startsWith(p))?.length ?? 0);
+const unsuffix = (t: string, ss: string[]) => t.slice(0, t.length - (ss.find((s) => t.endsWith(s))?.length ?? 0));
+
 /** Questions the agent asked you that are not in the profile's answers yet, with what you said. */
 export function askedQuestions(similar: (a: string, b: string) => number, answers: Array<{ q: string; a: string }>) {
   const rows = all<{ id: number; run_id: number; kind: string; text: string; ts: string; job_id: number; title: string | null; company: string | null }>(
     `SELECT s.id, s.run_id, s.kind, s.text, s.ts, r.job_id, j.title, j.company
      FROM run_steps s JOIN runs r ON r.id = s.run_id JOIN jobs j ON j.id = r.job_id
-     WHERE (s.kind = 'ask' AND s.text LIKE '问你：%') OR (s.kind = 'note' AND s.text LIKE '你的回答：%')
+     WHERE (s.kind = 'ask' AND (s.text LIKE ? OR s.text LIKE ?)) OR (s.kind = 'note' AND (s.text LIKE ? OR s.text LIKE ?))
      ORDER BY s.run_id, s.id`,
+    `${ASKED}%`,
+    `${ASKED_ZH}%`,
+    `${ANSWERED}%`,
+    `${ANSWERED_ZH}%`,
   );
   const out = new Map<string, { q: string; a: string; times: number; job: string; ts: string }>();
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     if (r.kind !== "ask") continue;
-    const q = r.text.slice("问你：".length).trim();
+    const q = unprefix(r.text, [ASKED, ASKED_ZH]).trim();
     const next = rows[i + 1];
-    const a = next && next.run_id === r.run_id && next.kind === "note" ? next.text.slice("你的回答：".length).replace(/（已记入资料库）$/, "").trim() : "";
+    const a = next && next.run_id === r.run_id && next.kind === "note" ? unsuffix(unprefix(next.text, [ANSWERED, ANSWERED_ZH]), [SAVED, SAVED_ZH]).trim() : "";
     if (!q || answers.some((x) => x.a.trim() && similar(x.q, q) >= 0.8)) continue;
     const key = q.toLowerCase().replace(/\s+/g, " ");
     const prev = out.get(key);

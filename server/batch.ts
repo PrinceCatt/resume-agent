@@ -1,4 +1,4 @@
-// Batch work (一键处理, and the automatic pipeline after a job is read) can wait for DeepSeek's off-peak
+// Batch work (Process, and the automatic pipeline after a job is read) can wait for DeepSeek's off-peak
 // hours, when every call costs half. Reading a posting never waits: it is cheap, and its fit score is
 // what you screen with. Tailoring and form filling are the cost, so while the setting is on their next
 // step waits in jobs.held and starts from here — off-peak only, and only when a slot is free, so nothing
@@ -71,7 +71,7 @@ export function pump(now = new Date()) {
   }
 }
 
-/** "现在就跑": held jobs (these, or all of them) start now and skip the wait for their remaining steps. */
+/** "Run now": held jobs (these, or all of them) start now and skip the wait for their remaining steps. */
 export function runNow(ids?: number[]) {
   const held = all<{ id: number }>("SELECT id FROM jobs WHERE held IS NOT NULL").map((r) => r.id);
   for (const id of ids ? held.filter((h) => ids.includes(h)) : held) {

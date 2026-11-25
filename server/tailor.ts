@@ -92,10 +92,10 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
   const checkText = (text: string, source: string, where: string) => {
     const srcNums = new Set(numbersIn(norm(source)));
     const bad = numbersIn(text).filter((n) => !srcNums.has(n));
-    if (bad.length) return `${where}：数字 ${bad.join(", ")} 在原始资料里找不到，已改回原文`;
+    if (bad.length) return `${where}: the number ${bad.join(", ")} is not in the original, so the original wording was kept`;
     const srcLower = norm(source) + "\n" + profileText;
     const unknown = jd.keywords.filter((k) => norm(text).includes(norm(k)) && !srcLower.includes(norm(k)));
-    if (unknown.length) warnings.push(`${where}：出现了资料里没有的「${unknown.join("」「")}」，请核对是否属实`);
+    if (unknown.length) warnings.push(`${where}: mentions ${unknown.map((k) => `"${k}"`).join(", ")}, which your profile does not; check that it is true`);
     return null;
   };
 
@@ -117,7 +117,7 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
         const id = `t_${bullets.length}_${me?.id ?? "new"}_${sections.length}`;
         if (src) {
           const entryText = [src.entry.title, src.entry.subtitle, src.entry.dates, ...src.entry.bullets.map((b) => b.text)].join("\n");
-          const problem = checkText(text, entryText, `「${me?.title || src.entry.title}」的一条要点`);
+          const problem = checkText(text, entryText, `A bullet under "${me?.title || src.entry.title}"`);
           if (problem) {
             warnings.push(problem);
             bullets.push({ id, text: src.bullet.text });
@@ -126,14 +126,14 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
             if (norm(text) !== norm(src.bullet.text)) origin[id] = src.bullet.text;
           }
         } else if (ob.src === "fact" && ob.fact && facts.includes(norm(ob.fact).slice(0, 60))) {
-          const problem = checkText(text, master.extraFacts, "素材库里的一条");
+          const problem = checkText(text, master.extraFacts, "A line from your extra facts");
           if (problem) {
             warnings.push(problem);
             bullets.push({ id, text: ob.fact.trim() });
           } else bullets.push({ id, text });
-          origin[id] = `（素材库）${ob.fact.trim()}`;
+          origin[id] = `(Extra facts) ${ob.fact.trim()}`;
         } else {
-          warnings.push(`去掉了一条找不到出处的要点：「${text.slice(0, 60)}」`);
+          warnings.push(`Removed a bullet with no source in your profile: "${text.slice(0, 60)}"`);
         }
       }
       if (me) {
@@ -144,8 +144,8 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
         const missing = (oe.title + " " + (oe.subtitle ?? ""))
           .split(/[^A-Za-z0-9一-鿿]+/)
           .filter((w) => w.length >= 3 && !facts.includes(w.toLowerCase()));
-        if (missing.length) warnings.push(`新条目「${oe.title}」里的 ${missing.join(", ")} 在素材库里找不到，请核对`);
-        warnings.push(`新增了素材库里的条目「${oe.title}」，请核对标题和日期`);
+        if (missing.length) warnings.push(`${missing.join(", ")} in the new entry "${oe.title}" is not in your extra facts; please check`);
+        warnings.push(`Added the entry "${oe.title}" from your extra facts; check its title and dates`);
         entries.push({ id: `new_${entries.length}_${sections.length}`, title: oe.title, subtitle: oe.subtitle ?? "", dates: oe.dates ?? "", location: oe.location ?? "", bullets });
       }
     }
@@ -156,7 +156,7 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
   for (const ms of master.sections) {
     if (/education|学历|教育/i.test(ms.heading) && !sections.some((s) => s.id === ms.id)) {
       sections.unshift(ms);
-      warnings.push("模型漏掉了教育经历，已按原样补回");
+      warnings.push("The model left out your education, so it was put back as it was");
     }
   }
 
@@ -172,8 +172,8 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
         if (hit) items.push(hit);
         else if (facts.includes(norm(it))) {
           items.push(it.trim());
-          warnings.push(`技能「${it}」来自素材库，请核对`);
-        } else warnings.push(`去掉了资料里没有的技能「${it}」`);
+          warnings.push(`The skill "${it}" comes from your extra facts; please check`);
+        } else warnings.push(`Removed the skill "${it}", which is not in your profile`);
       }
       return { ...mg, items: [...new Set(items)] };
     })
@@ -183,7 +183,7 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
   if (summary) {
     const bad = numbersIn(summary).filter((n) => !profileNumbers.has(n));
     if (bad.length) {
-      warnings.push(`简介里的数字 ${bad.join(", ")} 找不到出处，简介已去掉`);
+      warnings.push(`The summary had a number with no source (${bad.join(", ")}), so the summary was dropped`);
       summary = "";
     }
   }
@@ -205,7 +205,7 @@ export function assemble(master: Profile, out: TailorOutput, jd: JobJd): Omit<Ta
 export function coverLetterWarnings(master: Profile, text: string, jd: JobJd): string[] {
   const profileNumbers = new Set(numbersIn(norm(profileForPrompt(master, { withIds: false }) + "\n" + master.extraFacts)));
   const bad = numbersIn(text).filter((n) => !profileNumbers.has(n) && !norm(jd.title + jd.company).includes(n));
-  return bad.length ? [`求职信里的数字 ${bad.join(", ")} 找不到出处，请核对`] : [];
+  return bad.length ? [`The cover letter has a number with no source in your profile (${bad.join(", ")}); please check`] : [];
 }
 
 /** Write a cover letter when the settings say always, or when this posting asks for one. */
@@ -230,7 +230,7 @@ JSON SHAPE
  "sections": [{"id": string, "heading"?: string, "entries": [{"id": string, "title"?: string, "subtitle"?: string, "dates"?: string, "location"?: string, "bullets": [{"src": string, "text": string, "fact"?: string}]}]}],
  "skills": [{"id": string, "items": string[]}],
  "skillsPosition": number (index among your sections before which the skills block goes),
- "notes": string[] (3-6 short notes in Simplified Chinese: what you emphasised or dropped and why),
+ "notes": string[] (3-6 short notes in English: what you emphasised or dropped and why),
  "coverLetter": ${withCover ? `string (in the posting's language, 3 short paragraphs, ≤220 words, addressed "Dear Hiring Manager," and signed with the candidate's name; only facts; if the posting says what the letter should address, answer that with true facts)` : `""`}}`;
 }
 
@@ -242,15 +242,15 @@ const COVER_SYSTEM = `You write a cover letter for one job posting from a candid
 /** A cover letter for a job that has none, when a form asks for one mid-application. Also writes its PDF. */
 export async function writeCoverLetter(id: number): Promise<{ file: string; text: string; warnings: string[] }> {
   const job = getJob(id);
-  if (!job) throw new Error("岗位不存在");
+  if (!job) throw new Error("That job does not exist");
   if (job.cover_letter?.trim() && job.cover_file && fs.existsSync(job.cover_file)) return { file: job.cover_file, text: job.cover_letter, warnings: [] };
   const jd = jobJd(job);
-  if (!jd) throw new Error("先解析岗位");
+  if (!jd) throw new Error("Read the job first");
   const ready = llmReady();
   if (!ready.ok) throw new Error(ready.reason);
   const master = getProfile();
   const out = isDemo()
-    ? { coverLetter: `Dear Hiring Manager,\n\nI am applying for the ${jd.title} role at ${jd.company}.\n\n（演示模式：没有调用模型）\n\n${master.basics.name}` }
+    ? { coverLetter: `Dear Hiring Manager,\n\nI am applying for the ${jd.title} role at ${jd.company}.\n\n(Demo mode: no model was called)\n\n${master.basics.name}` }
     : await chatJson<{ coverLetter?: string }>(
         COVER_SYSTEM,
         `PROFILE\n${profileForPrompt(master, { withIds: false })}\n\nEXTRA FACTS\n${master.extraFacts || "(none)"}\n\nJOB POSTING\nTitle: ${jd.title}\nCompany: ${jd.company}\nRequirements:\n- ${jd.requirements.join("\n- ")}${coverAsk(jd)}\n\nFull text:\n${trimPosting(job.jd_text ?? "", job.url).slice(0, 6000)}`,
@@ -258,7 +258,7 @@ export async function writeCoverLetter(id: number): Promise<{ file: string; text
         { jobId: id, kind: "tailor" },
       );
   const text = (out.coverLetter ?? "").trim();
-  if (!text) throw new Error("没写出求职信");
+  if (!text) throw new Error("No cover letter came back");
   const warnings = coverLetterWarnings(master, text, jd);
   if (!parseJson<Tailored | null>(job.tailored, null)) await renderMasterFiles(id);
   const t = parseJson<Tailored>(getJob(id)!.tailored, null as never);
@@ -272,11 +272,11 @@ export async function tailorJob(id: number) {
   const job = getJob(id);
   if (!job) return;
   const jd = jobJd(job);
-  if (!jd) throw new Error("先解析岗位");
+  if (!jd) throw new Error("Read the job first");
   const ready = llmReady();
   if (!ready.ok) throw new Error(ready.reason);
   const master = getProfile();
-  if (!master.sections.length) throw new Error("资料库是空的：先到「资料库」填写或导入简历");
+  if (!master.sections.length) throw new Error("Your profile is empty: fill it in or import a resume on the Profile page first");
   const settings = getSettings();
   const lang = settings.resumeLanguage === "auto" ? jd.language : settings.resumeLanguage;
 
@@ -308,7 +308,7 @@ export async function tailorJob(id: number) {
 export async function renderJobFiles(id: number) {
   const job = getJob(id)!;
   const t = parseJson<Tailored | null>(job.tailored, null);
-  if (!t) throw new Error("还没有定制简历");
+  if (!t) throw new Error("No tailored resume yet");
   const base = fileBaseName(t.doc);
   const dir = path.join(FILES_DIR, `job-${id}`);
   const resumePath = path.join(dir, `${base}_Resume.pdf`);
@@ -326,7 +326,7 @@ export async function renderJobFiles(id: number) {
 export async function renderMasterFiles(id: number) {
   const master = getProfile();
   const doc = masterDoc(master);
-  const tailored: Tailored = { doc, origin: {}, notes: ["未定制：使用资料库原版简历"], warnings: [], coverage: { keywords: [], before: [], after: [] }, generatedAt: new Date().toISOString() };
+  const tailored: Tailored = { doc, origin: {}, notes: ["Not tailored: the original resume from your profile"], warnings: [], coverage: { keywords: [], before: [], after: [] }, generatedAt: new Date().toISOString() };
   setJob(id, { tailored: JSON.stringify(tailored) });
   await renderJobFiles(id);
 }

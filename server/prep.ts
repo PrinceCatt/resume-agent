@@ -38,13 +38,13 @@ export const prepState = (id: number) => ({ prepping: prepping.has(id), prepErro
 
 function context(id: number) {
   const job = getJob(id);
-  if (!job) throw new Error("岗位不存在");
+  if (!job) throw new Error("That job does not exist");
   const jd = jobJd(job);
-  if (!jd) throw new Error("先读取岗位");
+  if (!jd) throw new Error("Read the job first");
   const ready = llmReady();
   if (!ready.ok) throw new Error(ready.reason);
   const profile = getProfile();
-  if (!profile.sections.length) throw new Error("资料库是空的：先到「资料库」填写或导入简历");
+  if (!profile.sections.length) throw new Error("Your profile is empty: fill it in or import a resume on the Profile page first");
   const s = getSettings();
   const lang = s.resumeLanguage === "auto" ? jd.language : s.resumeLanguage;
   const posting = `Title: ${jd.title}\nCompany: ${jd.company}\nLocation: ${jd.location}\nRequirements:\n- ${jd.requirements.join("\n- ")}\nNice to have:\n- ${jd.niceToHave.join("\n- ")}\nKeywords: ${jd.keywords.join(", ")}\n\nFull text:\n${trimPosting(job.jd_text ?? "", job.url).slice(0, 8000)}`;
@@ -60,10 +60,10 @@ Every talking point is one of two kinds:
 - tip: advice on how to answer (structure, what to explain, what to admit). "src" is "tip". It must be phrased as advice ("Explain…", "Walk through…", "Admit that…") and must not describe anything as done by the candidate.
 Return JSON:
 {"pitch": string (a 30-45 second self-introduction for this role, first person, in ${langName}, only facts from CANDIDATE),
- "questions": [{"q": string (in ${langName}), "kind": "behavioral" | "technical" | "role" | "resume", "why": string (one sentence in Simplified Chinese: why an interviewer for this role would ask it), "points": [{"text": string (in ${langName}), "src": string, "fact"?: string}] (2-4 points; prefer experience points, use tips where CANDIDATE has nothing relevant)}]
+ "questions": [{"q": string (in ${langName}), "kind": "behavioral" | "technical" | "role" | "resume", "why": string (one sentence in English: why an interviewer for this role would ask it), "points": [{"text": string (in ${langName}), "src": string, "fact"?: string}] (2-4 points; prefer experience points, use tips where CANDIDATE has nothing relevant)}]
    (8-12 questions, the ones most likely for THIS posting: its must-haves and keywords, and what on the candidate's resume an interviewer would probe),
  "toAsk": string[] (3-5 questions for the candidate to ask the interviewer, in ${langName}, specific to this role and company),
- "gaps": [{"gap": string (Simplified Chinese), "how": string (Simplified Chinese: an honest way to handle it in the interview)}] (0-4 items)}`;
+ "gaps": [{"gap": string (English), "how": string (English: an honest way to handle it in the interview)}] (0-4 items)}`;
 
 /** Starts writing the prep in the background; the job emits when it is done. */
 export function queuePrep(id: number) {
@@ -78,7 +78,7 @@ export function queuePrep(id: number) {
         ? mockPrep(ctx.jd, ctx.profile, ctx.lang)
         : await chatJson<any>(prepSystem(ctx.langName), `JOB POSTING\n${ctx.posting}\n\nCANDIDATE\n${ctx.candidateWithIds}`, 5000, { jobId: id, kind: "prep" });
       const prep = normalizePrep(raw);
-      if (!prep.questions.length) throw new Error("模型没有给出面试题，再试一次");
+      if (!prep.questions.length) throw new Error("The model gave no interview questions; try again");
       if (getJob(id)) setJob(id, { prep: JSON.stringify(prep) });
     } catch (e) {
       prepErrors.set(id, e instanceof Error ? e.message : String(e));
@@ -98,7 +98,7 @@ const CLAIM = /^(i\s+|i've\s+|i have\s+)?(used|built|led|developed|implemented|c
 export function checkPoint(raw: any, profile: Profile, jd: Pick<JobJd, "keywords">): PrepPoint {
   const text = typeof raw === "string" ? raw.trim() : typeof raw?.text === "string" ? raw.text.trim() : "";
   const src = typeof raw?.src === "string" ? raw.src.trim().replace(/^\[|\]$/g, "") : "";
-  if (src.toLowerCase() === "tip") return CLAIM.test(text) ? { text, kind: "unsure", from: "写得像你做过的事，但没有标出处" } : { text, kind: "tip", from: "" };
+  if (src.toLowerCase() === "tip") return CLAIM.test(text) ? { text, kind: "unsure", from: "Reads like something you did, but names no source" } : { text, kind: "tip", from: "" };
   const where = new Map<string, string>();
   for (const s of profile.sections) {
     where.set(s.id, s.heading);
@@ -107,16 +107,16 @@ export function checkPoint(raw: any, profile: Profile, jd: Pick<JobJd, "keywords
       for (const b of e.bullets) where.set(b.id, e.title || s.heading);
     }
   }
-  for (const g of profile.skills) where.set(g.id, g.label || "技能");
+  for (const g of profile.skills) where.set(g.id, g.label || "Skills");
   let from = where.get(src) ?? "";
-  if (!from && src === "fact" && typeof raw?.fact === "string" && raw.fact.trim() && squash(profile.extraFacts).includes(squash(raw.fact))) from = "素材库";
-  if (!from) return { text, kind: "unsure", from: "资料库里找不到出处" };
+  if (!from && src === "fact" && typeof raw?.fact === "string" && raw.fact.trim() && squash(profile.extraFacts).includes(squash(raw.fact))) from = "Extra facts";
+  if (!from) return { text, kind: "unsure", from: "No source in your profile" };
   const ptext = profileText(profile);
   const missing = unsupportedTerms(text, ptext, jd.keywords);
-  if (missing.length) return { text, kind: "unsure", from: `出自「${from}」，但资料库里没有 ${missing.join("、")}` };
+  if (missing.length) return { text, kind: "unsure", from: `From "${from}", but your profile does not mention ${missing.join(", ")}` };
   const nums = new Set(numbersIn(ptext));
   const badNums = numbersIn(text).filter((n) => !nums.has(n));
-  if (badNums.length) return { text, kind: "unsure", from: `出自「${from}」，但资料库里没有 ${badNums.join("、")} 这个数字` };
+  if (badNums.length) return { text, kind: "unsure", from: `From "${from}", but your profile does not have the number ${badNums.join(", ")}` };
   return { text, kind: "fact", from };
 }
 
@@ -152,14 +152,14 @@ export function prepView(raw: any, profile: Profile, jd: Pick<JobJd, "keywords">
   return {
     ...raw,
     pitchWarnings: [
-      ...unsupportedTerms(pitch, ptext, keywords).map((t) => `提到了 ${t}，资料库里没有`),
-      ...numbersIn(pitch).filter((n) => !nums.has(n)).map((n) => `数字 ${n} 资料库里没有`),
+      ...unsupportedTerms(pitch, ptext, keywords).map((t) => `Mentions ${t}, which is not in your profile`),
+      ...numbersIn(pitch).filter((n) => !nums.has(n)).map((n) => `The number ${n} is not in your profile`),
     ],
     questions: raw.questions.map((q: any) => ({
       ...q,
       points: (q.points ?? []).map((p: any): PrepPoint =>
         typeof p === "string"
-          ? { text: p, kind: "unsure", from: "早先生成的，没有标出处：重新生成一次" }
+          ? { text: p, kind: "unsure", from: "Written by an older version without sources: write it again" }
           : typeof p?.kind === "string" && typeof p?.src !== "string"
             ? p
             : checkPoint(p, profile, { keywords }),
@@ -172,7 +172,7 @@ export function prepView(raw: any, profile: Profile, jd: Pick<JobJd, "keywords">
 export function draftWarnings(d: StoredDraft, profile: Profile, jd: Pick<JobJd, "keywords"> | null): string[] {
   // Names the notes mention (the interviewer's stack) are fine; anything else is worth a look.
   return unsupportedTerms(`${d.subject}\n${d.body}`, `${profileText(profile)}\n${d.extra}`, jd?.keywords ?? []).map(
-    (t) => `提到了 ${t}，资料库里没有：说的是对方的技术就没事，别写成你会`,
+    (t) => `Mentions ${t}, which is not in your profile: fine if it is about their technology, but do not claim it as yours`,
   );
 }
 
@@ -208,7 +208,7 @@ export async function makeDraft(id: number, kind: DraftKind, extra: string) {
     extra,
     generatedAt: new Date().toISOString(),
   };
-  if (!draft.body) throw new Error("模型没有写出邮件，再试一次");
+  if (!draft.body) throw new Error("The model wrote no email; try again");
   const drafts = parseJson<Partial<Record<DraftKind, StoredDraft>>>(getJob(id)?.drafts, {});
   drafts[kind] = draft;
   setJob(id, { drafts: JSON.stringify(drafts) });

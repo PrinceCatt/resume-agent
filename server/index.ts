@@ -215,16 +215,17 @@ app.get(
   "/api/balance",
   wrap(async () => ({ balance: await getBalance() })),
 );
-/** "充好了，继续": checks the balance, then retries what stopped on it (reads; batch jobs go on through the off-peak wait). */
+/** "Topped up, continue": checks the balance, then retries what stopped on it (reads; batch jobs go on through the off-peak wait). */
 app.post(
   "/api/llm/resume",
   wrap(async () => {
     const b = await getBalance(true);
-    if (b && !b.available) throw new Error(`DeepSeek 显示余额还是不够（${money(b)}），到账后再点`);
+    if (b && !b.available) throw new Error(`DeepSeek still shows too low a balance (${money(b)}); click again once the top-up arrives`);
     setNoBalance(null);
     let retried = 0;
     for (const j of listJobs()) {
-      if (!j.error || !/余额不足|模型接口 402/.test(j.error) || j.busy) continue;
+      // The Chinese forms are the same errors written by the Chinese edition, for jobs that stopped before switching.
+      if (!j.error || !/balance (is )?too low|Model API 402|余额不足|模型接口 402/.test(j.error) || j.busy) continue;
       setJob(j.id, { error: null });
       if (!j.jd) queueParse(j.id);
       else if (j.auto_apply && j.stage !== "applied" && j.stage !== "skipped") advance(j.id);
@@ -263,10 +264,10 @@ app.post(
       .map((q: unknown) => String(q ?? "").trim())
       .filter(Boolean)
       .slice(0, 8);
-    if (!queries.length) throw new Error("至少填一个关键词");
+    if (!queries.length) throw new Error("Enter at least one keyword");
     const kind: Kind = b.kind === "parttime" || b.kind === "internship" ? b.kind : "fulltime";
     const sources = (Array.isArray(b.sources) ? b.sources : []).filter((x: unknown): x is Source => x === "linkedin" || x === "mcf");
-    if (!sources.length) throw new Error("至少选一个网站");
+    if (!sources.length) throw new Error("Choose at least one site");
     const days = Math.min(30, Math.max(1, Math.round(Number(b.days) || 7)));
     const perQuery = Math.min(50, Math.max(10, Math.round(Number(b.perQuery) || 25)));
     return searchJobs({
@@ -305,13 +306,13 @@ app.post(
     limit: "15mb",
   }),
   wrap(async (req) => {
-    if (isDemo()) throw new Error("从 PDF 导入需要模型：先在设置里填 DeepSeek key 并关闭演示模式");
+    if (isDemo()) throw new Error("Importing from PDF needs the model: add a DeepSeek key in Settings and turn off demo mode first");
     const ready = llmReady();
     if (!ready.ok) throw new Error(ready.reason);
     const buf = req.body as Buffer;
-    if (!buf?.length) throw new Error("没收到文件");
+    if (!buf?.length) throw new Error("No file received");
     const text = await pdfText(new Uint8Array(buf));
-    if (text.length < 100) throw new Error("PDF 里读不到文字（可能是扫描件）");
+    if (text.length < 100) throw new Error("No text could be read from the PDF (it may be a scan)");
     const out = await chatJson<any>(
       `Convert a resume into JSON. Copy text faithfully; do not add, embellish or translate anything.
 Shape: {"basics":{"name","firstName","lastName","email","phone","phoneCountryCode","location","linkedin","github","website"},
@@ -347,7 +348,7 @@ app.post(
   wrap((req) => {
     const urls = (Array.isArray(req.body?.urls) ? req.body.urls : String(req.body?.urls ?? "").split(/\s+/)).map(String);
     const jdText = typeof req.body?.jdText === "string" ? req.body.jdText.trim() : "";
-    if (!urls.filter((u: string) => u.trim()).length && !jdText) throw new Error("请粘贴岗位链接或 JD");
+    if (!urls.filter((u: string) => u.trim()).length && !jdText) throw new Error("Paste a job link or a JD");
     return addJobs({ urls, jdText, autoApply: !!req.body?.autoApply });
   }),
 );
@@ -361,25 +362,25 @@ app.get("/api/jobs.csv", (req, res) => {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
   };
   const STAGE: Record<string, string> = {
-    new: "新加入",
-    parsed: "已读取",
-    tailored: "简历已改好",
-    applied: "已投递",
-    skipped: "已跳过",
+    new: "New",
+    parsed: "Read",
+    tailored: "Resume tailored",
+    applied: "Applied",
+    skipped: "Skipped",
   };
   const PROG: Record<string, string> = {
-    applied: "等回音",
-    screening: "笔试/测评",
-    interview: "面试中",
+    applied: "Awaiting reply",
+    screening: "Assessment",
+    interview: "Interviewing",
     offer: "Offer",
-    rejected: "未通过",
-    withdrawn: "我放弃了",
+    rejected: "Rejected",
+    withdrawn: "Withdrawn",
   };
   const cell = (v: unknown) => {
     const s = String(v ?? "");
     return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const rows = [["岗位", "公司", "地点", "链接", "状态", "进展", "投递时间", "进展更新", "下一个日程", "匹配度", "类型", "经验要求", "学历", "申请限制", "要交的材料", "薪资", "备注", "加入时间"]];
+  const rows = [["Job", "Company", "Location", "Link", "Status", "Progress", "Applied at", "Progress updated", "Next event", "Fit", "Type", "Experience", "Education", "Restrictions", "Documents to send", "Salary", "Notes", "Added at"]];
   const has = profileHas(getProfile());
   for (const j of listJobs()) {
     const v = jobView(j, has);
@@ -395,11 +396,11 @@ app.get("/api/jobs.csv", (req, res) => {
       local(v.progressAt),
       v.nextEvent ? `${EVENT_LABEL[v.nextEvent.kind]} ${local(v.nextEvent.at)}` : "",
       v.jd?.fit ? String(v.jd.fit.score) : "",
-      f ? typeLabel(f) || "没写" : "",
-      f ? (f.minYears === null ? "没写" : yearsLabel(f.minYears)) : "",
+      f ? typeLabel(f) || "Not stated" : "",
+      f ? (f.minYears === null ? "Not stated" : yearsLabel(f.minYears)) : "",
       f?.degree ? DEGREE_LABEL[f.degree] : "",
-      f ? [f.workAuth && AUTH_LABEL[f.workAuth], f.student === "graduated" && "须已毕业", f.student === "enrolled" && "须在读", v.jd?.closed && "已关闭"].filter(Boolean).join("、") : "",
-      f ? f.materials.map((m) => MATERIAL_LABEL[m]).join("、") : "",
+      f ? [f.workAuth && AUTH_LABEL[f.workAuth], f.student === "graduated" && "Graduates only", f.student === "enrolled" && "Current students only", v.jd?.closed && "Closed"].filter(Boolean).join(", ") : "",
+      f ? f.materials.map((m) => MATERIAL_LABEL[m]).join(", ") : "",
       f?.salary ?? "",
       v.notes,
       local(v.createdAt),
@@ -417,7 +418,7 @@ app.get(
   "/api/jobs/:id",
   wrap((req) => {
     const j = getJob(idOf(req));
-    if (!j) throw new Error("岗位不存在");
+    if (!j) throw new Error("That job does not exist");
     const runs = listRuns({ jobId: j.id }).map(runView);
     const profile = getProfile();
     const jd = jobJd(j);
@@ -442,7 +443,7 @@ app.patch(
   "/api/jobs/:id",
   wrap((req) => {
     const j = getJob(idOf(req));
-    if (!j) throw new Error("岗位不存在");
+    if (!j) throw new Error("That job does not exist");
     const b = req.body ?? {};
     const patch: Record<string, string | number | null> = {};
     if (b.stage === "skipped" || b.stage === "applied") {
@@ -517,7 +518,7 @@ app.post(
     return { ok: true };
   }),
 );
-/** "现在就跑" on jobs waiting for off-peak: these ids, or all of them. */
+/** "Run now" on jobs waiting for off-peak: these ids, or all of them. */
 app.post(
   "/api/jobs/run-now",
   wrap((req) => {
@@ -534,7 +535,7 @@ pipelineHooks.afterParse = (id) => {
   if (min > 0 && jd?.fit && jd.fit.score < min) {
     setJob(id, {
       auto_apply: 0,
-      notice: `匹配度 ${jd.fit.score}，低于你设的 ${min} 分，所以没有自动改简历和投递`,
+      notice: `Fit ${jd.fit.score} is below your minimum of ${min}, so the resume was not tailored and no application started automatically`,
     });
     return;
   }
@@ -547,9 +548,9 @@ app.put(
   "/api/jobs/:id/tailored",
   wrap(async (req) => {
     const j = getJob(idOf(req));
-    if (!j) throw new Error("岗位不存在");
+    if (!j) throw new Error("That job does not exist");
     const t = parseJson<Tailored | null>(j.tailored, null);
-    if (!t) throw new Error("还没有定制简历");
+    if (!t) throw new Error("No tailored resume yet");
     const doc = normalizeProfile({
       ...req.body.doc,
       extraFacts: "",
@@ -581,7 +582,7 @@ app.put(
 app.get("/api/jobs/:id/resume.html", (req, res) => {
   const j = getJob(idOf(req));
   const t = j && parseJson<Tailored | null>(j.tailored, null);
-  if (!t) return res.status(404).send("还没有定制简历");
+  if (!t) return res.status(404).send("No tailored resume yet");
   res.type("html").send(resumeHtml(t.doc as ResumeDoc, t.scale ?? 1));
 });
 for (const [route, col] of [
@@ -658,7 +659,7 @@ app.get(
   "/api/runs/:id",
   wrap((req) => {
     const r = listRuns().find((x) => x.id === idOf(req));
-    if (!r) throw new Error("没有这条记录");
+    if (!r) throw new Error("No such record");
     return { run: runView(r), steps: runSteps(r.id) };
   }),
 );
@@ -668,9 +669,9 @@ app.post(
     const body = req.body as UserReply;
     if (!["answer", "resume", "confirm", "revise", "cancel"].includes(body?.type)) throw new Error("bad reply");
     const r = getRun(idOf(req));
-    if (!r) throw new Error("没有这条记录");
-    if (body.type === "confirm" && r.status !== "awaiting_confirm") throw new Error("这份申请现在不在等确认");
-    if (!reply(r.id, body)) throw new Error("这次填写已经结束了");
+    if (!r) throw new Error("No such record");
+    if (body.type === "confirm" && r.status !== "awaiting_confirm") throw new Error("This application is not waiting for confirmation right now");
+    if (!reply(r.id, body)) throw new Error("This run has already ended");
     return { ok: true };
   }),
 );
@@ -692,7 +693,7 @@ app.post(
   wrap((req) => {
     const p = getProfile();
     const q = String(req.body?.q ?? "").trim();
-    if (!q) throw new Error("问题不能为空");
+    if (!q) throw new Error("The question cannot be empty");
     p.answers.push({ id: newId("qa"), q, a: String(req.body?.a ?? "") });
     saveProfile(p);
     emit("profile");

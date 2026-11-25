@@ -6,7 +6,7 @@ import { getJob, setJob, type Progress } from "./jobs.ts";
 
 export const EVENT_KINDS = ["interview", "test", "call", "deadline", "other"] as const;
 export type EventKind = (typeof EVENT_KINDS)[number];
-const LABEL: Record<EventKind, string> = { interview: "面试", test: "笔试/测评", call: "电话沟通", deadline: "投递截止", other: "日程" };
+const LABEL: Record<EventKind, string> = { interview: "Interview", test: "Assessment", call: "Call", deadline: "Deadline", other: "Event" };
 
 export type EventRow = {
   id: number;
@@ -54,10 +54,10 @@ const RANK: Partial<Record<Progress, number>> = { applied: 0, screening: 1, inte
 
 export function addEvent(jobId: number, input: { kind?: unknown; at?: unknown; minutes?: unknown; note?: unknown }) {
   const job = getJob(jobId);
-  if (!job) throw new Error("岗位不存在");
+  if (!job) throw new Error("That job does not exist");
   const kind = EVENT_KINDS.includes(input.kind as EventKind) ? (input.kind as EventKind) : "other";
   const at = toSqlTime(input.at);
-  if (!at) throw new Error("时间不对");
+  if (!at) throw new Error("That time is not valid");
   const minutes = kind === "deadline" ? 0 : clampMinutes(input.minutes);
   const note = typeof input.note === "string" ? input.note.trim().slice(0, 500) : "";
   const { id } = run("INSERT INTO events (job_id, kind, at, minutes, note) VALUES (?, ?, ?, ?, ?)", jobId, kind, at, minutes, note);
@@ -79,12 +79,12 @@ function clampMinutes(v: unknown) {
 
 export function updateEvent(id: number, input: { kind?: unknown; at?: unknown; minutes?: unknown; note?: unknown; done?: unknown }) {
   const ev = get<EventRow>("SELECT * FROM events WHERE id = ?", id);
-  if (!ev) throw new Error("没有这条日程");
+  if (!ev) throw new Error("No such event");
   const patch: Record<string, string | number> = {};
   if (EVENT_KINDS.includes(input.kind as EventKind)) patch.kind = input.kind as EventKind;
   if (input.at !== undefined) {
     const at = toSqlTime(input.at);
-    if (!at) throw new Error("时间不对");
+    if (!at) throw new Error("That time is not valid");
     patch.at = at;
   }
   if (input.minutes !== undefined) patch.minutes = clampMinutes(input.minutes);

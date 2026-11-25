@@ -33,7 +33,7 @@ export function mockExtractJob(text: string, url: string, pageTitle: string): Jo
     title,
     company,
     location: /singapore/i.test(text) ? "Singapore" : "",
-    summary: "（演示模式：没有调用模型，以下是按关键词粗略提取的结果）",
+    summary: "(Demo mode: no model was called; this is a rough extraction by keyword)",
     requirements: req,
     niceToHave: [],
     keywords,
@@ -74,9 +74,9 @@ export function mockFit(jd: JobJd, profile: Profile): NonNullable<JobJd["fit"]> 
   const score = jd.keywords.length ? Math.round(30 + (60 * has.length) / jd.keywords.length) : 50;
   return {
     score,
-    verdict: "演示模式：只按关键词重合度粗估，没有真正理解岗位要求。",
-    strengths: has.length ? [`资料里有：${has.slice(0, 6).join("、")}`] : [],
-    gaps: miss.length ? [`资料里没找到：${miss.slice(0, 6).join("、")}`] : [],
+    verdict: "Demo mode: a rough estimate from keyword overlap only, without really understanding the requirements.",
+    strengths: has.length ? [`In your profile: ${has.slice(0, 6).join(", ")}`] : [],
+    gaps: miss.length ? [`Not in your profile: ${miss.slice(0, 6).join(", ")}`] : [],
   };
 }
 
@@ -94,7 +94,7 @@ export function mockTailor(master: Profile, jd: JobJd): TailorOutput {
     })),
     skills: master.skills.map((g) => ({ id: g.id, items: [...g.items].sort((a, b) => rank(a) - rank(b)) })),
     skillsPosition: master.skillsPosition,
-    notes: ["演示模式：没有调用模型，只把和岗位关键词相关的要点、技能排到了前面，措辞没改。"],
+    notes: ["Demo mode: no model was called. Bullets and skills matching the posting's keywords were moved to the front; the wording is unchanged."],
     coverLetter: "",
   };
 }
@@ -158,7 +158,7 @@ export function mockDecide(obs: Obs, profile: Profile, job: JobRow, mem: MockMem
   const call = (name: string, args: object) => calls.push({ id: `mock_${++mem.n}`, type: "function", function: { name, arguments: JSON.stringify(args) } });
 
   if (/thank you for (applying|your application)|application (has been )?(received|submitted)|申请已提交|投递成功/i.test(obs.excerpt)) {
-    call("finish", { outcome: "submitted", note: "页面显示已收到申请" });
+    call("finish", { outcome: "submitted", note: "The page says the application was received" });
     return calls;
   }
   const fields = obs.elements.filter((e) => !["button", "link", "option"].includes(e.kind) && !e.disabled);
@@ -168,7 +168,7 @@ export function mockDecide(obs: Obs, profile: Profile, job: JobRow, mem: MockMem
     if (apply && !mem.done.has(apply.id)) {
       mem.done.add(apply.id);
       call("click", { id: apply.id });
-    } else call("need_manual", { reason: "演示模式没找到申请表或申请按钮，请在浏览器里看一下" });
+    } else call("need_manual", { reason: "Demo mode found no application form or apply button; please take a look in the browser" });
     return calls;
   }
 
@@ -225,10 +225,10 @@ export function mockDecide(obs: Obs, profile: Profile, job: JobRow, mem: MockMem
     const key = missing.label || missing.id;
     if (!mem.asked.has(key)) {
       mem.asked.add(key);
-      call("ask_user", { question: `「${missing.label}」这一项资料库里没有，该填什么？`, field_label: missing.label });
+      call("ask_user", { question: `"${missing.label}" is not in your profile. What should go there?`, field_label: missing.label });
       return calls;
     }
-    call("need_manual", { reason: `演示模式不会填「${missing.label}」，请在浏览器里填好后点继续` });
+    call("need_manual", { reason: `Demo mode cannot fill in "${missing.label}". Fill it in in the browser, then click continue` });
     mem.asked.delete(key);
     return calls;
   }
@@ -237,12 +237,12 @@ export function mockDecide(obs: Obs, profile: Profile, job: JobRow, mem: MockMem
   const next = buttons.find((e) => NEXT.test(e.text) && !mem.done.has(e.id));
   if (submit) {
     mem.submitRequested++;
-    if (mem.submitRequested > 3) call("need_manual", { reason: "提交后页面没有出现确认信息，请在浏览器里看一下" });
-    else call("request_submit", { id: submit.id, summary: "演示模式：已按资料库填写所有能识别的字段，请核对后确认。" });
+    if (mem.submitRequested > 3) call("need_manual", { reason: "No confirmation appeared after submitting; please take a look in the browser" });
+    else call("request_submit", { id: submit.id, summary: "Demo mode: filled in every field it recognised from your profile. Please check, then confirm." });
   } else if (next) {
     mem.done.add(next.id);
     call("click", { id: next.id });
-  } else call("need_manual", { reason: "演示模式没找到下一步或提交按钮" });
+  } else call("need_manual", { reason: "Demo mode found no next or submit button" });
   return calls;
 }
 
@@ -264,13 +264,13 @@ export function mockPrep(jd: JobJd, profile: Profile, lang: "en" | "zh") {
     {
       q: zh ? "先简单介绍一下你自己。" : "Tell me about yourself.",
       kind: "behavioral",
-      why: "几乎每场面试的开场题，用下面的自我介绍回答。",
+      why: "The opener of almost every interview; answer with the self-introduction.",
       points: [...(edu ? [{ text: `${edu.title}${edu.subtitle ? ` · ${edu.subtitle}` : ""}`, src: edu.id }] : []), ...bullets.slice(0, 2).map((b) => ({ text: `${b.where}: ${b.text}`, src: b.id }))],
     },
     {
       q: zh ? `为什么想加入${jd.company || "我们"}、做${role}？` : `Why do you want this ${role} role${jd.company ? ` at ${jd.company}` : ""}?`,
       kind: "role",
-      why: "考察你对岗位和公司的了解、动机是否清楚。",
+      why: "Checks what you know about the role and the company, and whether your motivation is clear.",
       points: [
         have.length
           ? { text: zh ? `把岗位要的 ${have.slice(0, 3).join("、")} 和你用过它们的经历对上` : `Connect the ${have.slice(0, 3).join(", ")} the role asks for with where you used them`, src: "tip" }
@@ -280,7 +280,7 @@ export function mockPrep(jd: JobJd, profile: Profile, lang: "en" | "zh") {
     ...have.slice(0, 5).map((k) => ({
       q: zh ? `讲一个你用 ${k} 做过的项目。` : `Walk me through something you built with ${k}.`,
       kind: "technical",
-      why: `岗位关键词里有 ${k}，你的资料里也有，面试官大概率会深挖。`,
+      why: `${k} is among the posting's keywords and in your profile, so an interviewer will likely dig into it.`,
       points: about(k).length
         ? about(k).map((b) => ({ text: `${b.where}: ${b.text}`, src: b.id }))
         : [{ text: zh ? `技能栏里写了 ${k}：准备一个具体例子` : `${k} is in your skills list: prepare one concrete example`, src: "tip" }],
@@ -288,7 +288,7 @@ export function mockPrep(jd: JobJd, profile: Profile, lang: "en" | "zh") {
     ...miss.slice(0, 2).map((k) => ({
       q: zh ? `你对 ${k} 熟悉吗？` : `How familiar are you with ${k}?`,
       kind: "technical",
-      why: `岗位要 ${k}，你的资料里没有。`,
+      why: `The role asks for ${k}, which your profile does not mention.`,
       points: [{ text: zh ? `诚实说没用过 ${k}，讲你会怎么上手，以及相近的经验` : `Say honestly you have not used ${k}; explain how you would pick it up and what is closest in your experience`, src: "tip" }],
     })),
   ];
@@ -300,8 +300,8 @@ export function mockPrep(jd: JobJd, profile: Profile, lang: "en" | "zh") {
     toAsk: zh
       ? ["这个岗位前三个月最重要的事情是什么？", "团队现在的技术栈和开发流程是怎样的？", "你们怎么评价一个实习生 / 新人做得好？"]
       : ["What would success look like in the first three months?", "What does the team's stack and development process look like?", "How do you give feedback to interns or new joiners?"],
-    gaps: miss.length ? [{ gap: `资料里没有：${miss.slice(0, 4).join("、")}`, how: "不要硬说会；讲相近经验和学习计划。" }] : [],
-    _demo: "演示模式：按模板生成，不是模型写的",
+    gaps: miss.length ? [{ gap: `Not in your profile: ${miss.slice(0, 4).join(", ")}`, how: "Don't claim you know it; talk about related experience and how you would learn it." }] : [],
+    _demo: "Demo mode: built from a template, not written by the model",
   };
 }
 

@@ -28,12 +28,12 @@ let noBalance: { balance: string } | null = null;
 export function llmReady(): LlmState {
   const s = getSettings();
   if (s.llmMode === "demo") return { ok: true };
-  if (!s.apiKey) return { ok: false, code: "no_key", reason: "还没填 DeepSeek API key：到「设置」里填上，或者先切到演示模式。" };
+  if (!s.apiKey) return { ok: false, code: "no_key", reason: "No DeepSeek API key yet: add one in Settings, or switch to demo mode first." };
   if (noBalance)
     return {
       ok: false,
       code: "no_balance",
-      reason: `DeepSeek 账户余额不足${noBalance.balance ? `（${noBalance.balance}）` : ""}：充值后点岗位页上的「充好了，继续」。`,
+      reason: `DeepSeek balance is too low${noBalance.balance ? ` (${noBalance.balance})` : ""}: top up, then click "Topped up, continue" on the Jobs page.`,
     };
   return { ok: true };
 }
@@ -95,7 +95,7 @@ export async function chat(opts: {
   usage?: UsageTag;
 }): Promise<{ content: string; toolCalls: ToolCall[] }> {
   const s = getSettings();
-  if (!s.apiKey) throw new LlmError("没有 API key");
+  if (!s.apiKey) throw new LlmError("No API key");
   const body: Record<string, unknown> = {
     model: s.model,
     messages: opts.messages,
@@ -118,15 +118,15 @@ export async function chat(opts: {
         signal: AbortSignal.timeout(180_000),
       });
       if (res.status === 429 || res.status >= 500) {
-        lastErr = new LlmError(`模型接口 ${res.status}`);
+        lastErr = new LlmError(`Model API ${res.status}`);
         await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
         continue;
       }
       if (!res.ok) {
         const text = await res.text();
-        const hint = res.status === 401 ? "（API key 不对）" : res.status === 402 ? "（账户余额不足）" : "";
+        const hint = res.status === 401 ? " (wrong API key)" : res.status === 402 ? " (balance too low)" : "";
         if (res.status === 402) setNoBalance(noBalance?.balance ?? "");
-        throw new LlmError(`模型接口 ${res.status}${hint}: ${text.slice(0, 300)}`);
+        throw new LlmError(`Model API ${res.status}${hint}: ${text.slice(0, 300)}`);
       }
       const data = (await res.json()) as any;
       if (noBalance) setNoBalance(null);
@@ -181,6 +181,6 @@ export async function chatJson<T>(system: string, user: string, maxTokens = 4096
   try {
     return JSON.parse(text) as T;
   } catch {
-    throw new LlmError(`模型没有返回合法 JSON：${text.slice(0, 200)}`);
+    throw new LlmError(`The model did not return valid JSON: ${text.slice(0, 200)}`);
   }
 }
