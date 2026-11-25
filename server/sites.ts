@@ -44,7 +44,7 @@ export const SITES: Site[] = [
     name: "JobStreet",
     match: /^https?:\/\/([a-z]+\.)?jobstreet\.com(\.[a-z]+)?\//i,
     login: "https://sg.jobstreet.com/",
-    note: "\"Quick apply\" is filled in on JobStreet. When you are signed out or a bot check appears, the agent stops and lets you deal with it in its window.",
+    note: "\"Quick apply\" is filled in on JobStreet. When you are signed out or a bot check appears, the agent stops and lets you deal with it in that tab.",
     visibleOnly: true,
     playbook: `JobStreet
 - Signed out (a "Sign in" button in the header, or the apply page asks you to sign in or create an account): call need_manual asking the candidate to sign in to JobStreet in this window.

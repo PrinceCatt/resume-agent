@@ -181,7 +181,7 @@ export default function ProfilePage() {
         <Card className="p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 id="p-skills" className="scroll-mt-16 font-medium">Skills</h2>
-            <div className="flex items-center gap-2 text-xs text-muted">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               Heading
               <input className={`${inputCls} w-40! text-xs`} value={p.skillsHeading} onChange={(e) => edit((d) => (d.skillsHeading = e.target.value))} />
               Placed

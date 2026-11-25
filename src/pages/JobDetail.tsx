@@ -339,7 +339,7 @@ function FitCard({ fit }: { fit: Fit }) {
       )}
       {!!fit.unsupported?.length && (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          The assessment counted {fit.unsupported.join(", ")} as your strengths, but your profile doesn't mention {fit.unsupported.length === 1 ? "it" : "them"}, so the score may be too high. If you really have {fit.unsupported.length === 1 ? "it" : "them"}, add {fit.unsupported.length === 1 ? "it" : "them"} to your profile and re-read the job from "More".
+          The assessment counted {fit.unsupported.join(", ")} among your strengths, but your profile doesn't mention {fit.unsupported.length === 1 ? "it" : "them"}, so the score may be too high. If you really have {fit.unsupported.length === 1 ? "it" : "them"}, add {fit.unsupported.length === 1 ? "it" : "them"} to your profile and re-read the job from "More".
         </div>
       )}
       <div className="mt-3 text-xs text-stone-400">After changing your profile, re-score it with "More → Re-read job".</div>

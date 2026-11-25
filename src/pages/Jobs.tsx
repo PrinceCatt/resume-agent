@@ -456,7 +456,7 @@ function ReqBar({ value: f, onChange, showStats, onToggleStats }: { value: ReqFi
   const toggleType = (t: ReqFilter["types"][number]) => set({ types: f.types.includes(t) ? f.types.filter((x) => x !== t) : [...f.types, t] });
   return (
     <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[13px]">
-      <span className="flex items-center gap-1">
+      <span className="flex flex-wrap items-center gap-1">
         {REQ_KINDS.map((t) => (
           <button key={t} className={chipCls(f.types.includes(t))} aria-pressed={f.types.includes(t)} onClick={() => toggleType(t)}>
             {REQ_KIND_LABEL[t]}
@@ -521,8 +521,8 @@ function ReqStatsPanel({ jobs, filtering, picked, onPick }: { jobs: JobView[]; f
         <div className="space-y-1">
           {rows.map((r) => (
             <div key={r.label} className="flex items-center gap-2 text-[13px]">
-              <span className="w-36 shrink-0 truncate">{r.label}</span>
-              <span className="h-1.5 min-w-0 flex-1 rounded-full bg-stone-100">
+              <span className="w-36 min-w-0 truncate" title={r.label}>{r.label}</span>
+              <span className="h-1.5 min-w-8 flex-1 rounded-full bg-stone-100">
                 <span className="block h-full rounded-full bg-brand-500" style={{ width: `${of ? Math.round((r.n / of) * 100) : 0}%` }} />
               </span>
               <span className="w-6 shrink-0 text-right text-xs text-muted tabular-nums">{r.n}</span>
