@@ -26,9 +26,9 @@ function useWaitingNotifications(runs: RunView[] | undefined) {
     if (document.visibilityState === "visible" && document.hasFocus()) return;
     const r = fresh[0];
     const name = jobName({ title: r.job_title, company: r.job_company, url: r.job_url });
-    const what = r.status === "awaiting_confirm" ? "填好了，等你确认提交" : r.pending?.kind === "manual" ? "需要你在浏览器里处理一下" : "有一项要你回答";
-    const n = new Notification(fresh.length > 1 ? `${fresh.length} 份申请在等你` : "投递助手", {
-      body: `${name}${r.job_company ? ` · ${r.job_company}` : ""}：${what}`,
+    const what = r.status === "awaiting_confirm" ? "filled in, waiting for you to confirm" : r.pending?.kind === "manual" ? "needs you in the browser" : "has a question for you";
+    const n = new Notification(fresh.length > 1 ? `${fresh.length} applications are waiting for you` : "Resume Agent", {
+      body: `${name}${r.job_company ? ` · ${r.job_company}` : ""}: ${what}`,
       tag: "resume-agent-waiting",
     });
     n.onclick = () => {
@@ -58,7 +58,7 @@ function useEventReminders() {
       const job = [jobName({ title: e.job_title, company: e.job_company, url: e.job_url }), e.job_company].filter(Boolean).join(" · ");
       const what = `${whenLabel(e.at)} ${eventLabel(e.kind)}`;
       if (pref.get("notify") === "1" && typeof Notification !== "undefined" && Notification.permission === "granted") {
-        const n = new Notification(e.kind === "deadline" ? "投递快截止了" : `${Math.max(1, Math.round(h * 60))} 分钟后：${eventLabel(e.kind)}`, {
+        const n = new Notification(e.kind === "deadline" ? "Application deadline coming up" : `In ${Math.max(1, Math.round(h * 60))} min: ${eventLabel(e.kind)}`, {
           body: `${job}\n${what}${e.note ? `\n${e.note}` : ""}`,
           tag: `resume-agent-event-${e.id}`,
         });
@@ -68,7 +68,7 @@ function useEventReminders() {
           n.close();
         };
       } else {
-        toast(`提醒：${what} · ${job}`);
+        toast(`Reminder: ${what} · ${job}`);
       }
     }
   }, [data, tick]);
@@ -82,7 +82,7 @@ export default function App() {
   useWaitingNotifications(active.data?.runs);
   useEventReminders();
   useEffect(() => {
-    document.title = waiting ? `(${waiting}) 投递助手` : "投递助手";
+    document.title = waiting ? `(${waiting}) Resume Agent` : "Resume Agent";
   }, [waiting]);
 
   let page;
@@ -95,22 +95,22 @@ export default function App() {
   else page = <JobsPage state={state.data} />;
 
   const nav: Array<{ path: string; label: string; icon: IconName; count?: number; match: (r: string) => boolean }> = [
-    { path: "/", label: "岗位", icon: "jobs", match: (r) => r === "/" || r.startsWith("/jobs") },
-    { path: "/review", label: "待处理", icon: "inbox", count: waiting, match: (r) => r.startsWith("/review") },
-    { path: "/stats", label: "统计", icon: "chart", match: (r) => r.startsWith("/stats") },
-    { path: "/profile", label: "资料库", icon: "profile", match: (r) => r.startsWith("/profile") },
-    { path: "/settings", label: "设置", icon: "settings", match: (r) => r.startsWith("/settings") },
+    { path: "/", label: "Jobs", icon: "jobs", match: (r) => r === "/" || r.startsWith("/jobs") },
+    { path: "/review", label: "Waiting", icon: "inbox", count: waiting, match: (r) => r.startsWith("/review") },
+    { path: "/stats", label: "Stats", icon: "chart", match: (r) => r.startsWith("/stats") },
+    { path: "/profile", label: "Profile", icon: "profile", match: (r) => r.startsWith("/profile") },
+    { path: "/settings", label: "Settings", icon: "settings", match: (r) => r.startsWith("/settings") },
   ];
   const s = state.data;
   const llm = !s
     ? null
     : s.demo
-      ? { text: "演示模式（不调用模型）", short: "演示模式", tone: "text-amber-700", dot: "bg-amber-500" }
+      ? { text: "Demo mode (no model calls)", short: "Demo mode", tone: "text-amber-700", dot: "bg-amber-500" }
       : s.llm.ok
         ? { text: `DeepSeek · ${s.settings.model}`, short: "DeepSeek", tone: "text-brand-700", dot: "bg-brand-500" }
         : s.llm.code === "no_balance"
-          ? { text: "DeepSeek 余额不足", short: "余额不足", tone: "text-red-700", dot: "bg-red-500" }
-          : { text: "还没填 API key", short: "未配置", tone: "text-red-700", dot: "bg-red-500" };
+          ? { text: "DeepSeek balance too low", short: "No balance", tone: "text-red-700", dot: "bg-red-500" }
+          : { text: "No API key yet", short: "Not set up", tone: "text-red-700", dot: "bg-red-500" };
 
   return (
     <div className="flex min-h-full flex-col md:flex-row">
@@ -123,7 +123,7 @@ export default function App() {
                 <path d="M6 8h5M6 10.5h5" />
               </svg>
             </span>
-            <span className="font-semibold tracking-tight">投递助手</span>
+            <span className="font-semibold tracking-tight">Resume Agent</span>
           </button>
           {llm && (
             <button className={`flex items-center gap-1.5 text-xs md:hidden ${llm.tone}`} onClick={() => go("/settings")}>
@@ -160,7 +160,7 @@ export default function App() {
             <div className="flex items-center justify-between gap-2 text-muted">
               <span className="flex items-center gap-1.5">
                 <span className={`size-1.5 rounded-full ${s.browser.status === "on" ? "bg-brand-500" : s.browser.status === "waiting" ? "bg-amber-400" : "bg-stone-300"}`} />
-                {(s.settings.browserChannel === "chrome" ? "Chrome" : "Edge") + (s.browser.status === "on" ? " 已连接" : s.browser.status === "waiting" ? " 等你点允许" : " 未连接")}
+                {(s.settings.browserChannel === "chrome" ? "Chrome" : "Edge") + (s.browser.status === "on" ? " connected" : s.browser.status === "waiting" ? " waiting for you to allow" : " not connected")}
               </span>
               {s.browser.status === "off" && (
                 <button
@@ -170,7 +170,7 @@ export default function App() {
                     api("/browser/open", { body: {} }).catch((e) => toast(e.message, "err"));
                   }}
                 >
-                  连接
+                  Connect
                 </button>
               )}
             </div>

@@ -87,12 +87,12 @@ export const PROGRESS: Array<{
   label: string;
   tone: "green" | "blue" | "violet" | "gray";
 }> = [
-  { key: "applied", label: "等回音", tone: "green" },
-  { key: "screening", label: "笔试/测评", tone: "blue" },
-  { key: "interview", label: "面试中", tone: "violet" },
-  { key: "offer", label: "拿到 Offer", tone: "green" },
-  { key: "rejected", label: "未通过", tone: "gray" },
-  { key: "withdrawn", label: "我放弃了", tone: "gray" },
+  { key: "applied", label: "Awaiting reply", tone: "green" },
+  { key: "screening", label: "Assessment", tone: "blue" },
+  { key: "interview", label: "Interviewing", tone: "violet" },
+  { key: "offer", label: "Offer", tone: "green" },
+  { key: "rejected", label: "Rejected", tone: "gray" },
+  { key: "withdrawn", label: "Withdrawn", tone: "gray" },
 ];
 export type JobView = {
   id: number;
@@ -140,13 +140,13 @@ export const EVENT_KINDS: Array<{
   label: string;
   dot: string;
 }> = [
-  { key: "interview", label: "面试", dot: "bg-violet-500" },
-  { key: "test", label: "笔试/测评", dot: "bg-sky-500" },
-  { key: "call", label: "电话沟通", dot: "bg-brand-500" },
-  { key: "deadline", label: "投递截止", dot: "bg-amber-500" },
-  { key: "other", label: "其他", dot: "bg-stone-400" },
+  { key: "interview", label: "Interview", dot: "bg-violet-500" },
+  { key: "test", label: "Assessment", dot: "bg-sky-500" },
+  { key: "call", label: "Call", dot: "bg-brand-500" },
+  { key: "deadline", label: "Deadline", dot: "bg-amber-500" },
+  { key: "other", label: "Other", dot: "bg-stone-400" },
 ];
-export const eventLabel = (k: EventKind) => EVENT_KINDS.find((x) => x.key === k)?.label ?? "日程";
+export const eventLabel = (k: EventKind) => EVENT_KINDS.find((x) => x.key === k)?.label ?? "Event";
 export type CalEvent = {
   id: number;
   job_id: number;
@@ -341,24 +341,35 @@ export function ago(s: string | null | undefined) {
   const d = parseTime(s);
   if (!d) return "";
   const sec = (Date.now() - d.getTime()) / 1000;
-  if (sec < 60) return "刚刚";
-  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
-  if (sec < 86400 * 7) return `${Math.floor(sec / 86400)} 天前`;
-  return d.getFullYear() === new Date().getFullYear() ? `${d.getMonth() + 1}月${d.getDate()}日` : `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  if (sec < 60) return "just now";
+  if (sec < 3600) return `${Math.floor(sec / 60)} min ago`;
+  if (sec < 86400) return `${Math.floor(sec / 3600)} h ago`;
+  if (sec < 86400 * 7) {
+    const n = Math.floor(sec / 86400);
+    return `${n} ${n === 1 ? "day" : "days"} ago`;
+  }
+  return dayMonth(d, d.getFullYear() !== new Date().getFullYear());
 }
+const MONTH = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "20 Nov", or "20 Nov 2025" with the year. */
+const dayMonth = (d: Date, withYear = false) => `${d.getDate()} ${MONTH[d.getMonth()]}${withYear ? ` ${d.getFullYear()}` : ""}`;
 export function localTime(s: string | null | undefined) {
   const d = parseTime(s);
   if (!d) return "";
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${dayMonth(d)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+/** "20 Nov": localTime without the time. */
+export function localDay(s: string | null | undefined) {
+  const d = parseTime(s);
+  return d ? dayMonth(d) : "";
 }
 export const daysSince = (s: string | null | undefined) => {
   const d = parseTime(s);
   return d ? (Date.now() - d.getTime()) / 86_400_000 : Infinity;
 };
-const WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-/** "今天 14:00", "明天 09:30", "周四 14:00" within a week, else "11月20日 14:00". */
+const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** "Today 14:00", "Tomorrow 09:30", "Thu 14:00" within a week, else "20 Nov 14:00". */
 export function whenLabel(s: string | null | undefined, withTime = true) {
   const d = parseTime(s);
   if (!d) return "";
@@ -367,12 +378,11 @@ export function whenLabel(s: string | null | undefined, withTime = true) {
   const day0 = new Date();
   day0.setHours(0, 0, 0, 0);
   const days = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - day0.getTime()) / 86_400_000);
-  if (days === 0) return `今天${time}`;
-  if (days === 1) return `明天${time}`;
-  if (days === 2) return `后天${time}`;
-  if (days === -1) return `昨天${time}`;
-  if (days > 2 && days < 7) return `${WEEKDAY[d.getDay()]}${time}`;
-  return `${d.getFullYear() === day0.getFullYear() ? "" : `${d.getFullYear()}年`}${d.getMonth() + 1}月${d.getDate()}日${time}`;
+  if (days === 0) return `Today${time}`;
+  if (days === 1) return `Tomorrow${time}`;
+  if (days === -1) return `Yesterday${time}`;
+  if (days > 1 && days < 7) return `${WEEKDAY[d.getDay()]}${time}`;
+  return `${dayMonth(d, d.getFullYear() !== day0.getFullYear())}${time}`;
 }
 /** Hours from now (negative = past). */
 export const hoursUntil = (s: string | null | undefined) => {
@@ -423,7 +433,7 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   } catch {
     data = { error: text };
   }
-  if (!res.ok) throw new Error(data?.error ?? `请求失败（${res.status}）`);
+  if (!res.ok) throw new Error(data?.error ?? `Request failed (${res.status})`);
   return data as T;
 }
 
@@ -521,13 +531,13 @@ export const go = (path: string) => {
 };
 
 export const RUN_LABEL: Record<RunStatus, string> = {
-  queued: "排队中",
-  running: "填写中",
-  need_user: "等你处理",
-  awaiting_confirm: "待确认提交",
-  submitted: "已提交",
-  finished: "已结束",
-  failed: "失败",
-  cancelled: "已放弃",
-  interrupted: "已中断",
+  queued: "Queued",
+  running: "Filling in",
+  need_user: "Needs you",
+  awaiting_confirm: "Ready to submit",
+  submitted: "Submitted",
+  finished: "Finished",
+  failed: "Failed",
+  cancelled: "Abandoned",
+  interrupted: "Interrupted",
 };

@@ -27,12 +27,12 @@ import { factChips, isFiltering, KIND_LABEL as REQ_KIND_LABEL, KINDS as REQ_KIND
 
 type FilterKey = "all" | "active" | "you" | "applied" | "progress" | "skipped";
 const FILTERS: Array<{ key: FilterKey; label: string }> = [
-  { key: "all", label: "全部" },
-  { key: "active", label: "进行中" },
-  { key: "you", label: "等你处理" },
-  { key: "applied", label: "已投递" },
-  { key: "progress", label: "有进展" },
-  { key: "skipped", label: "已跳过" },
+  { key: "all", label: "All" },
+  { key: "active", label: "In progress" },
+  { key: "you", label: "Needs you" },
+  { key: "applied", label: "Applied" },
+  { key: "progress", label: "Moving forward" },
+  { key: "skipped", label: "Skipped" },
 ];
 type SortKey = "new" | "fit" | "updated";
 type ViewKey = "list" | "board";
@@ -116,36 +116,36 @@ export default function JobsPage({ state }: { state: AppState | null }) {
     <div className={`mx-auto ${view === "board" ? "max-w-7xl" : "max-w-5xl"}`}>
       <header className="mb-5 flex items-end justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold tracking-tight">岗位</h1>
-          <p className="mt-1 text-sm text-muted">贴链接进来，助手会读岗位、按岗位改简历、去网站上填申请表。每一份都停在提交按钮前，等你确认。</p>
+          <h1 className="text-xl font-semibold tracking-tight">Jobs</h1>
+          <p className="mt-1 text-sm text-muted">Paste job links: the agent reads each posting, tailors your resume to it and fills in the application form on the site. Every application stops before the submit button and waits for you.</p>
         </div>
         {jobs.length > 0 && (
           <a
             href="/api/jobs.csv"
             className="inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap text-muted hover:text-ink"
-            title="把列表导出成表格（Excel 可以直接打开）"
+            title="Export the list as a spreadsheet (opens in Excel)"
           >
             <Icon name="download" />
-            导出表格
+            Export
           </a>
         )}
       </header>
 
       {llmMissing && setupHidden && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span>还没填 DeepSeek API key。填上之后才会真正改简历、填表；也可以先开演示模式，用本地测试岗位走一遍流程。</span>
+          <span>No DeepSeek API key yet. Resumes are only really tailored and forms filled once you add one; or turn on demo mode first and try the whole flow on the local test job.</span>
           <Button size="sm" variant="primary" onClick={() => go("/settings")}>
-            去设置
+            Open Settings
           </Button>
         </div>
       )}
 
       {noBalance && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
-          <span>{noBalance.replace(/：充值后.*$/, "")}。读取、改简历、填表都先停下，不会一个个报错。到 DeepSeek 后台充值后点右边继续。</span>
+          <span>{noBalance.replace(/: top up.*$/, "")}. Reading, tailoring and form filling are paused instead of failing one by one. Top up on the DeepSeek platform, then continue on the right.</span>
           <div className="flex shrink-0 gap-2">
             <a className="inline-flex items-center rounded-md px-2.5 text-sm text-red-800 hover:underline" href="https://platform.deepseek.com/" target="_blank" rel="noreferrer">
-              去充值
+              Top up
             </a>
             <Button
               size="sm"
@@ -154,11 +154,11 @@ export default function JobsPage({ state }: { state: AppState | null }) {
               onClick={() =>
                 run("resume", async () => {
                   const r = await api<{ retried: number }>("/llm/resume", { body: {} });
-                  toast(r.retried ? `余额够了，继续处理 ${r.retried} 个岗位` : "余额够了，可以继续用", "ok");
+                  toast(r.retried ? `Balance is fine; continuing ${r.retried} ${r.retried === 1 ? "job" : "jobs"}` : "Balance is fine; carry on", "ok");
                 })
               }
             >
-              充好了，继续
+              Topped up, continue
             </Button>
           </div>
         </div>
@@ -177,15 +177,15 @@ export default function JobsPage({ state }: { state: AppState | null }) {
       {jobs.length > 0 && (
         <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat
-            label="等你处理"
+            label="Needs you"
             value={counts.you}
             tone={counts.you ? "amber" : undefined}
-            hint={counts.you ? "去确认或回答" : "没有"}
+            hint={counts.you ? "Confirm or answer" : "Nothing"}
             onClick={() => (counts.you ? go("/review") : setFilter("you"))}
           />
-          <Stat label="进行中" value={counts.active} hint={counts.active ? "读取、改简历或填表" : "空闲"} onClick={() => setFilter("active")} />
-          <Stat label="已投递" value={counts.applied} hint={appliedWeek ? `近 7 天 +${appliedWeek}` : "近 7 天没有"} onClick={() => setFilter("applied")} />
-          <Stat label="有进展" value={counts.progress} hint={offers ? `${offers} 个 Offer` : "笔试、面试、Offer"} onClick={() => setFilter("progress")} />
+          <Stat label="In progress" value={counts.active} hint={counts.active ? "Reading, tailoring or filling in" : "Idle"} onClick={() => setFilter("active")} />
+          <Stat label="Applied" value={counts.applied} hint={appliedWeek ? `+${appliedWeek} in the last 7 days` : "None in the last 7 days"} onClick={() => setFilter("applied")} />
+          <Stat label="Moving forward" value={counts.progress} hint={offers ? `${offers} ${offers === 1 ? "offer" : "offers"}` : "Tests, interviews, offers"} onClick={() => setFilter("progress")} />
         </div>
       )}
 
@@ -193,11 +193,11 @@ export default function JobsPage({ state }: { state: AppState | null }) {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-white px-4 py-3 text-sm">
           <span>
             {isPeak()
-              ? `${held} 个岗位在等 DeepSeek 闲时，${peakEndLabel()} 以后自动开始改简历、填表（那时半价）。`
-              : `${held} 个岗位在排队，有空位就开始改简历、填表。`}
+              ? `${held} ${held === 1 ? "job is" : "jobs are"} waiting for DeepSeek's off-peak hours: tailoring and form filling start by themselves after ${peakEndLabel()} (half price then).`
+              : `${held} ${held === 1 ? "job is" : "jobs are"} queued: tailoring and form filling start as soon as a slot is free.`}
           </span>
-          <Button size="sm" busy={busy === "now"} onClick={() => run("now", () => api("/jobs/run-now", { body: {} }), "开始处理")}>
-            现在就跑
+          <Button size="sm" busy={busy === "now"} onClick={() => run("now", () => api("/jobs/run-now", { body: {} }), "Started")}>
+            Run now
           </Button>
         </div>
       )}
@@ -209,9 +209,9 @@ export default function JobsPage({ state }: { state: AppState | null }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         {view === "board" ? (
           <div className="text-sm text-muted">
-            看板显示全部岗位（不含已跳过），
-            <span className="pointer-coarse:hidden">把卡片拖到别的列就是改进展。</span>
-            <span className="hidden pointer-coarse:inline">已投递的卡片下面可以直接改进展。</span>
+            The board shows every job except skipped ones.{" "}
+            <span className="pointer-coarse:hidden">Drag a card to another column to update its progress.</span>
+            <span className="hidden pointer-coarse:inline">Applied cards have a progress picker underneath.</span>
           </div>
         ) : (
           <div className="scroll-clean -mx-1 flex max-w-full gap-1 overflow-x-auto px-1">
@@ -228,11 +228,11 @@ export default function JobsPage({ state }: { state: AppState | null }) {
           </div>
         )}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:flex-none">
-          <div className="flex shrink-0 rounded-md bg-stone-100 p-0.5" role="radiogroup" aria-label="显示方式">
+          <div className="flex shrink-0 rounded-md bg-stone-100 p-0.5" role="radiogroup" aria-label="View">
             {(
               [
-                ["list", "列表", "list"],
-                ["board", "看板", "board"],
+                ["list", "List", "list"],
+                ["board", "Board", "board"],
               ] as const
             ).map(([k, label, icon]) => (
               <button
@@ -250,13 +250,13 @@ export default function JobsPage({ state }: { state: AppState | null }) {
           </div>
           <label className="relative min-w-0 flex-1 sm:w-52 sm:flex-none">
             <Icon name="search" className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-stone-400" />
-            <input className={`${inputCls} pl-8`} placeholder="搜岗位、公司、备注" value={q} onChange={(e) => setQ(e.target.value)} />
+            <input className={`${inputCls} pl-8`} placeholder="Search jobs, companies, notes" value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           {view === "list" && (
-            <select className={`${inputCls} w-auto! pr-7`} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="排序">
-              <option value="new">最近加入</option>
-              <option value="fit">匹配度</option>
-              <option value="updated">最近变动</option>
+            <select className={`${inputCls} w-auto! pr-7`} value={sort} onChange={(e) => setSort(e.target.value as SortKey)} aria-label="Sort">
+              <option value="new">Recently added</option>
+              <option value="fit">Fit</option>
+              <option value="updated">Recently changed</option>
             </select>
           )}
         </div>
@@ -268,12 +268,12 @@ export default function JobsPage({ state }: { state: AppState | null }) {
       {view === "board" && data && jobs.length > 0 ? (
         <Board jobs={shown} />
       ) : data && !shown.length ? (
-        <Empty title={q ? "没有搜到" : filtering ? "没有符合筛选条件的岗位" : jobs.length ? "这个分类下没有岗位" : "还没有岗位"}>
-          {q ? `没有包含「${q}」的岗位` : filtering ? (
+        <Empty title={q ? "No matches" : filtering ? "No jobs match these filters" : jobs.length ? "No jobs in this group" : "No jobs yet"}>
+          {q ? `No job contains "${q}"` : filtering ? (
             <button className="text-brand-700 hover:underline" onClick={() => setReq(NO_FILTER)}>
-              清除筛选
+              Clear filters
             </button>
-          ) : jobs.length ? "" : "在上面贴几个岗位链接开始。"}
+          ) : jobs.length ? "" : "Paste a few job links above to start."}
         </Empty>
       ) : (
         <Card className="overflow-hidden">
@@ -282,13 +282,13 @@ export default function JobsPage({ state }: { state: AppState | null }) {
               <input
                 type="checkbox"
                 className="accent-brand-600"
-                aria-label="全选"
+                aria-label="Select all"
                 checked={allChecked}
                 onChange={() => setSel(allChecked ? new Set() : new Set(shown.map((j) => j.id)))}
               />
               {selected.length ? (
                 <>
-                  <span className="text-muted">已选 {selected.length}</span>
+                  <span className="text-muted">{selected.length} selected</span>
                   <Button
                     size="sm"
                     variant="primary"
@@ -302,11 +302,11 @@ export default function JobsPage({ state }: { state: AppState | null }) {
                           });
                           setSel(new Set());
                         },
-                        "开始处理所选岗位",
+                        "Processing the selected jobs",
                       )
                     }
                   >
-                    一键处理
+                    Process
                   </Button>
                   <Button
                     size="sm"
@@ -323,32 +323,32 @@ export default function JobsPage({ state }: { state: AppState | null }) {
                       })
                     }
                   >
-                    {filter === "skipped" ? "恢复" : "跳过"}
+                    {filter === "skipped" ? "Restore" : "Skip"}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      if (!confirm(`删除这 ${selected.length} 个岗位和它们的简历、投递记录？`)) return;
+                      if (!confirm(`Delete ${selected.length === 1 ? "this job" : `these ${selected.length} jobs`} with ${selected.length === 1 ? "its" : "their"} resumes and application records?`)) return;
                       void run(
                         "del",
                         async () => {
                           for (const j of selected) await api(`/jobs/${j.id}`, { method: "DELETE" });
                           setSel(new Set());
                         },
-                        "已删除",
+                        "Deleted",
                       );
                     }}
                   >
-                    删除
+                    Delete
                   </Button>
                   <span className="hidden text-xs text-muted md:inline">
-                    一键处理 = 每个岗位把剩下的步骤走完（读取 → 改简历 → 填表），提交前都会停下。
-                    {state?.settings.offPeakOnly && "改简历和填表会等到 DeepSeek 闲时。"}
+                    Process = take each job through its remaining steps (read → tailor resume → fill form); each one stops before submitting.
+                    {state?.settings.offPeakOnly && " Tailoring and form filling wait for DeepSeek's off-peak hours."}
                   </span>
                 </>
               ) : (
-                <span className="text-xs text-muted">{shown.length} 个岗位</span>
+                <span className="text-xs text-muted">{shown.length} {shown.length === 1 ? "job" : "jobs"}</span>
               )}
             </div>
           )}
@@ -388,11 +388,11 @@ function Upcoming() {
       <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">
         <span className="flex items-center gap-2 text-sm font-medium">
           <Icon name="calendar" className="size-4 text-stone-400" />
-          接下来
+          Coming up
         </span>
         {events.length > list.length || showAll ? (
           <button className="text-xs text-brand-700 hover:underline" onClick={() => setShowAll(!showAll)}>
-            {showAll ? "收起" : `全部 ${events.length} 项`}
+            {showAll ? "Show less" : `All ${events.length}`}
           </button>
         ) : null}
       </div>
@@ -404,8 +404,8 @@ function Upcoming() {
           return (
             <li key={e.id} className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-paper/60">
               <span className={`size-2 shrink-0 rounded-full ${EVENT_KINDS.find((k) => k.key === e.kind)?.dot ?? "bg-stone-400"}`} />
-              <span className={`w-24 shrink-0 tabular-nums ${now ? "font-medium text-violet-800" : h < 24 ? "font-medium" : "text-muted"}`}>
-                {now ? "进行中" : whenLabel(e.at)}
+              <span className={`w-32 shrink-0 tabular-nums ${now ? "font-medium text-violet-800" : h < 24 ? "font-medium" : "text-muted"}`}>
+                {now ? "Now" : whenLabel(e.at)}
               </span>
               <button className="min-w-0 flex-1 truncate text-left" onClick={() => go(`/jobs/${e.job_id}`)}>
                 <span className="font-medium">{eventLabel(e.kind)}</span>
@@ -417,12 +417,12 @@ function Upcoming() {
               </button>
               {link && (
                 <a href={link} target="_blank" rel="noreferrer" className="shrink-0 text-xs text-brand-700 hover:underline" title={link}>
-                  链接
+                  Link
                 </a>
               )}
               {!now && h < 72 && (
                 <span className="hidden shrink-0 text-xs text-muted sm:inline">
-                  {h < 1 ? `${Math.max(1, Math.round(h * 60))} 分钟后` : `${Math.round(h)} 小时后`}
+                  {h < 1 ? `in ${Math.max(1, Math.round(h * 60))} min` : `in ${Math.round(h)} h`}
                 </span>
               )}
             </li>
@@ -463,47 +463,47 @@ function ReqBar({ value: f, onChange, showStats, onToggleStats }: { value: ReqFi
           </button>
         ))}
       </span>
-      <select className={miniSelect} aria-label="经验要求" value={f.maxYears ?? ""} onChange={(e) => set({ maxYears: e.target.value === "" ? null : Number(e.target.value) })}>
-        <option value="">经验不限</option>
-        <option value="0">不要经验</option>
-        <option value="1">最多 1 年</option>
-        <option value="2">最多 2 年</option>
+      <select className={miniSelect} aria-label="Experience required" value={f.maxYears ?? ""} onChange={(e) => set({ maxYears: e.target.value === "" ? null : Number(e.target.value) })}>
+        <option value="">Any experience</option>
+        <option value="0">No experience</option>
+        <option value="1">Up to 1 year</option>
+        <option value="2">Up to 2 years</option>
       </select>
-      <select className={miniSelect} aria-label="求职信" value={f.coverLetter} onChange={(e) => set({ coverLetter: e.target.value as ReqFilter["coverLetter"] })}>
-        <option value="any">求职信不限</option>
-        <option value="yes">要求求职信</option>
-        <option value="no">不要求求职信</option>
+      <select className={miniSelect} aria-label="Cover letter" value={f.coverLetter} onChange={(e) => set({ coverLetter: e.target.value as ReqFilter["coverLetter"] })}>
+        <option value="any">Cover letter: any</option>
+        <option value="yes">Asks for a cover letter</option>
+        <option value="no">No cover letter</option>
       </select>
-      <select className={miniSelect} aria-label="匹配度" value={f.minFit} onChange={(e) => set({ minFit: Number(e.target.value) })}>
-        <option value="0">匹配度不限</option>
-        <option value="50">匹配度 50+</option>
-        <option value="70">匹配度 70+</option>
-        <option value="85">匹配度 85+</option>
+      <select className={miniSelect} aria-label="Fit" value={f.minFit} onChange={(e) => set({ minFit: Number(e.target.value) })}>
+        <option value="0">Any fit</option>
+        <option value="50">Fit 50+</option>
+        <option value="70">Fit 70+</option>
+        <option value="85">Fit 85+</option>
       </select>
       <button className={chipCls(f.hideCitizenOnly)} aria-pressed={f.hideCitizenOnly} onClick={() => set({ hideCitizenOnly: !f.hideCitizenOnly })}>
-        不看仅限公民
+        Hide citizens-only
       </button>
       <button className={chipCls(f.hideGraduatedOnly)} aria-pressed={f.hideGraduatedOnly} onClick={() => set({ hideGraduatedOnly: !f.hideGraduatedOnly })}>
-        不看须已毕业
+        Hide graduates-only
       </button>
       <button className={chipCls(f.hideClosed)} aria-pressed={f.hideClosed} onClick={() => set({ hideClosed: !f.hideClosed })}>
-        不看已关闭
+        Hide closed
       </button>
       {f.keyword && (
-        <button className={`${chipCls(true)} inline-flex items-center gap-1`} onClick={() => set({ keyword: "" })} title="去掉这个技能筛选">
-          技能：{f.keyword}
+        <button className={`${chipCls(true)} inline-flex items-center gap-1`} onClick={() => set({ keyword: "" })} title="Remove this skill filter">
+          Skill: {f.keyword}
           <Icon name="x" className="size-3" />
         </button>
       )}
       <span className="ml-auto flex items-center gap-2">
         {isFiltering(f) && (
           <button className="text-muted hover:text-ink" onClick={() => onChange(NO_FILTER)}>
-            清除筛选
+            Clear filters
           </button>
         )}
         <button className={`${chipCls(showStats)} inline-flex items-center gap-1`} aria-pressed={showStats} onClick={onToggleStats}>
           <Icon name="chart" className="size-3.5" />
-          要求统计
+          Requirements
         </button>
       </span>
     </div>
@@ -521,7 +521,7 @@ function ReqStatsPanel({ jobs, filtering, picked, onPick }: { jobs: JobView[]; f
         <div className="space-y-1">
           {rows.map((r) => (
             <div key={r.label} className="flex items-center gap-2 text-[13px]">
-              <span className="w-24 shrink-0 truncate">{r.label}</span>
+              <span className="w-36 shrink-0 truncate">{r.label}</span>
               <span className="h-1.5 min-w-0 flex-1 rounded-full bg-stone-100">
                 <span className="block h-full rounded-full bg-brand-500" style={{ width: `${of ? Math.round((r.n / of) * 100) : 0}%` }} />
               </span>
@@ -530,30 +530,30 @@ function ReqStatsPanel({ jobs, filtering, picked, onPick }: { jobs: JobView[]; f
           ))}
         </div>
       ) : (
-        <div className="text-[13px] text-stone-400">没有</div>
+        <div className="text-[13px] text-stone-400">None</div>
       )}
     </div>
   );
   return (
     <Card className="mb-3 p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">要求统计</span>
+        <span className="text-sm font-medium">What the postings ask for</span>
         <span className="text-xs text-muted">
-          {filtering ? "按当前筛选，" : ""}
-          {s.total} 个岗位
-          {s.noFacts > 0 && `，其中 ${s.noFacts} 个是旧的读取结果、没有条件信息（重新读取就有）`}
+          {s.total} {s.total === 1 ? "job" : "jobs"}
+          {filtering ? " matching the filters" : ""}
+          {s.noFacts > 0 && `; ${s.noFacts} of them were read before conditions were recorded (re-read to get them)`}
         </span>
       </div>
       <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
-        {group("类型", s.types, known)}
-        {group("经验要求", s.years, known)}
-        {group("限制", s.limits, s.total)}
-        {group("要交的材料", s.materials, known)}
+        {group("Type", s.types, known)}
+        {group("Experience", s.years, known)}
+        {group("Restrictions", s.limits, s.total)}
+        {group("Documents to send", s.materials, known)}
       </div>
       {s.keywords.length > 0 && (
         <div className="mt-4">
           <div className="mb-1.5 text-xs font-medium text-muted">
-            最常要求的技能 <span className="font-normal">· ✓ 你的简历里有 · 点一下只看要这个技能的岗位</span>
+            Most-asked skills <span className="font-normal">· ✓ in your profile · click one to see only the jobs that ask for it</span>
           </div>
           <div className="flex flex-wrap gap-1">
             {s.keywords.map((k) => (
@@ -583,9 +583,9 @@ function ReqStatsPanel({ jobs, filtering, picked, onPick }: { jobs: JobView[]; f
 
 const DEFAULT_QUERIES = "software engineer, backend developer, full stack developer";
 const KINDS: Array<{ key: SearchKind; label: string }> = [
-  { key: "fulltime", label: "全职（入门级）" },
-  { key: "parttime", label: "兼职" },
-  { key: "internship", label: "实习" },
+  { key: "fulltime", label: "Full-time (entry level)" },
+  { key: "parttime", label: "Part-time" },
+  { key: "internship", label: "Internship" },
 ];
 
 function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown }) {
@@ -638,7 +638,7 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
       const added = new Set(urls);
       setFound((prev) => (prev ?? []).map((f) => (added.has(f.url) ? { ...f, existingId: f.existingId ?? -1 } : f)));
       setPicked(new Set());
-      toast(`加入了 ${r.ids.length} 个${auto ? "，正在读取和评估匹配度" : ""}${r.duplicates.length ? `；${r.duplicates.length} 个已在列表里` : ""}`);
+      toast(`Added ${r.ids.length}${auto ? "; reading them and scoring the fit" : ""}${r.duplicates.length ? `; ${r.duplicates.length} already in the list` : ""}`);
     });
   const fresh = (found ?? []).filter((f) => !f.existingId);
   const toggle = (url: string, on: boolean) =>
@@ -653,7 +653,7 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
     <div className="space-y-3">
       <input
         className={inputCls}
-        placeholder="关键词，逗号分隔，每个分别搜"
+        placeholder="Keywords, separated by commas; each is searched separately"
         value={queries}
         onChange={(e) => setQueries(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && list.length && sources.length && search()}
@@ -671,11 +671,11 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
           ))}
         </div>
         <label className="flex items-center gap-1.5 text-muted">
-          发布于
+          Posted
           <select className="rounded-md border border-line bg-white px-1.5 py-1 text-sm" value={days} onChange={(e) => setDays(Number(e.target.value))}>
             {[1, 3, 7, 14, 30].map((d) => (
               <option key={d} value={d}>
-                {d === 1 ? "24 小时内" : `${d} 天内`}
+                {d === 1 ? "in the last 24 hours" : `in the last ${d} days`}
               </option>
             ))}
           </select>
@@ -685,21 +685,21 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
           LinkedIn
         </label>
         {linkedin && (
-          <label className="flex items-center gap-1.5 text-muted" title="Easy Apply 在 LinkedIn 里直接填，不用去公司网站注册账号">
+          <label className="flex items-center gap-1.5 text-muted" title="Easy Apply is filled in on LinkedIn itself, with no account to create on a company site">
             <input type="checkbox" className="accent-brand-600" checked={easyOnly} onChange={(e) => setEasyOnly(e.target.checked)} />
-            只要 Easy Apply
+            Easy Apply only
           </label>
         )}
         <label className="flex items-center gap-1.5 text-muted">
           <input type="checkbox" className="accent-brand-600" checked={mcf} onChange={(e) => setMcf(e.target.checked)} />
           MyCareersFuture
         </label>
-        <label className="flex items-center gap-1.5 text-muted" title="标题里有 Senior、Lead、Manager、5+ years 之类的不列出来">
+        <label className="flex items-center gap-1.5 text-muted" title="Leaves out titles with Senior, Lead, Manager, 5+ years and the like">
           <input type="checkbox" className="accent-brand-600" checked={hideSenior} onChange={(e) => setHideSenior(e.target.checked)} />
-          不看资深岗
+          Hide senior roles
         </label>
         <Button variant="primary" size="sm" busy={busy === "search"} disabled={!list.length || !sources.length} onClick={search}>
-          搜索
+          Search
         </Button>
       </div>
       {errors.map((e) => (
@@ -711,22 +711,22 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
         <div>
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
             <span>
-              找到 {found.length} 个{found.length - fresh.length ? `，其中 ${found.length - fresh.length} 个已在列表里` : ""}
-              {hidden ? `（另有 ${hidden} 个资深岗没列出）` : ""}；只是列出来，勾选后加入才会读取和评估
+              Found {found.length}{found.length - fresh.length ? `, ${found.length - fresh.length} already in the list` : ""}
+              {hidden ? ` (${hidden} senior ${hidden === 1 ? "role" : "roles"} not shown)` : ""}. This is only a list: jobs are read and scored once you tick and add them.
             </span>
             {fresh.length > 0 && (
               <span className="flex gap-3">
                 <button className="text-brand-700 hover:underline" onClick={() => setPicked(new Set(fresh.map((f) => f.url)))}>
-                  全选
+                  Select all
                 </button>
                 <button className="text-brand-700 hover:underline" onClick={() => setPicked(new Set())}>
-                  全不选
+                  Select none
                 </button>
               </span>
             )}
           </div>
           {found.length === 0 ? (
-            <div className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-muted">没有结果。换个关键词，或者把时间放宽一点</div>
+            <div className="rounded-md border border-dashed border-line px-3 py-6 text-center text-sm text-muted">No results. Try other keywords or a longer time range.</div>
           ) : (
             <div className="max-h-[28rem] divide-y divide-line overflow-y-auto rounded-md border border-line">
               {found.map((f) => (
@@ -746,7 +746,7 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
                       <a href={f.url} target="_blank" rel="noreferrer" className="font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
                         {f.title}
                       </a>
-                      {f.existingId ? <Badge>已在列表</Badge> : null}
+                      {f.existingId ? <Badge>In list</Badge> : null}
                     </span>
                     <span className="block truncate text-xs text-muted">
                       {[f.company, f.location, f.salary, f.posted ? ago(f.posted) : "", f.source === "linkedin" ? "LinkedIn" : "MyCareersFuture"]
@@ -761,7 +761,7 @@ function SearchBox({ auto, onAdded }: { auto: boolean; onAdded: () => unknown })
           {fresh.length > 0 && (
             <div className="mt-2 flex justify-end">
               <Button variant="primary" busy={busy === "add"} disabled={!picked.size} onClick={addPicked}>
-                加入选中的 {picked.size} 个
+                Add {picked.size} selected
               </Button>
             </div>
           )}
@@ -798,14 +798,14 @@ function AddBox({ state, onAdded }: { state: AppState | null; onAdded: () => unk
       setJdText("");
       await onAdded();
       if (!r.ids.length && r.duplicates.length === 1) {
-        toast("这个岗位已经在列表里了，已为你打开");
+        toast("This job is already in the list; opened it for you");
         go(`/jobs/${r.duplicates[0].id}`);
         return;
       }
       const parts = [];
-      if (r.ids.length) parts.push(`加入了 ${r.ids.length} 个${auto ? "，正在读取" : ""}`);
-      if (r.duplicates.length) parts.push(`${r.duplicates.length} 个已经在列表里，没有重复加`);
-      toast(parts.join("；"));
+      if (r.ids.length) parts.push(`Added ${r.ids.length}${auto ? "; reading now" : ""}`);
+      if (r.duplicates.length) parts.push(`${r.duplicates.length} already in the list, not added again`);
+      toast(parts.join("; "));
     });
 
   return (
@@ -818,13 +818,13 @@ function AddBox({ state, onAdded }: { state: AppState | null; onAdded: () => unk
               className={`border-b-2 pb-0.5 ${mode === m ? "border-brand-600 font-medium" : "border-transparent text-muted hover:text-ink"}`}
               onClick={() => setMode(m)}
             >
-              {m === "search" ? "搜索岗位" : pasteJd ? "粘贴 JD 文本" : "粘贴岗位链接"}
+              {m === "search" ? "Search jobs" : pasteJd ? "Paste JD text" : "Paste job links"}
             </button>
           ))}
         </div>
         {mode === "paste" && (
           <button className="text-xs text-brand-700 hover:underline" onClick={() => setPasteJd(!pasteJd)}>
-            {pasteJd ? "改为贴链接" : "页面打不开？直接贴 JD"}
+            {pasteJd ? "Paste links instead" : "Page won't open? Paste the JD"}
           </button>
         )}
       </div>
@@ -833,20 +833,20 @@ function AddBox({ state, onAdded }: { state: AppState | null; onAdded: () => unk
           <SearchBox auto={auto} onAdded={onAdded} />
           <label className="mt-3 flex items-center gap-2 text-sm text-muted">
             <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="accent-brand-600" />
-            加入后自动走完：读岗位 → 改简历 → 填表（提交前等你确认）
+            After adding, run every step: read job → tailor resume → fill form (waits for you before submitting)
           </label>
         </>
       ) : (
         <>
           {pasteJd ? (
             <div className="space-y-2">
-              <input className={inputCls} placeholder="申请页链接（可选，没有就不能自动投）" value={urls} onChange={(e) => setUrls(e.target.value)} />
-              <textarea className={`${inputCls} min-h-32`} placeholder="把岗位描述整段贴进来" value={jdText} onChange={(e) => setJdText(e.target.value)} />
+              <input className={inputCls} placeholder="Application page link (optional; without one it cannot apply for you)" value={urls} onChange={(e) => setUrls(e.target.value)} />
+              <textarea className={`${inputCls} min-h-32`} placeholder="Paste the whole job description here" value={jdText} onChange={(e) => setJdText(e.target.value)} />
             </div>
           ) : (
             <textarea
               className={`${inputCls} min-h-20 font-mono text-[13px]`}
-              placeholder={"一行一个，可以一次贴很多；整封招聘邮件贴进来也行，会自动挑出链接\nhttps://boards.greenhouse.io/…\nhttps://jobs.lever.co/…"}
+              placeholder={"One per line, as many as you like. A whole job-alert email works too: the links are picked out of it\nhttps://boards.greenhouse.io/…\nhttps://jobs.lever.co/…"}
               value={urls}
               onChange={(e) => setUrls(e.target.value)}
               onKeyDown={(e) => {
@@ -857,13 +857,13 @@ function AddBox({ state, onAdded }: { state: AppState | null; onAdded: () => unk
           <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm text-muted">
               <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} className="accent-brand-600" />
-              加入后自动走完：读岗位 → 改简历 → 填表（提交前等你确认）
+              After adding, run every step: read job → tailor resume → fill form (waits for you before submitting)
             </label>
             <div className="flex items-center gap-2">
-              {!pasteJd && found.length > 0 && <span className="text-xs text-muted">识别到 {found.length} 个链接</span>}
+              {!pasteJd && found.length > 0 && <span className="text-xs text-muted">{found.length} {found.length === 1 ? "link" : "links"} found</span>}
               {state?.demo && (
                 <Button size="sm" variant="ghost" onClick={() => add([`${window.location.origin}/fixtures/test-job.html?n=${Date.now() % 100000}`])}>
-                  加一个本地测试岗位
+                  Add a local test job
                 </Button>
               )}
               <Button
@@ -873,7 +873,7 @@ function AddBox({ state, onAdded }: { state: AppState | null; onAdded: () => unk
                 title="Ctrl+Enter"
                 onClick={() => add(pasteJd ? (urls.trim() ? [urls.trim()] : []) : found, pasteJd ? jdText : undefined)}
               >
-                添加{!pasteJd && found.length > 1 ? ` ${found.length} 个` : ""}
+                Add{!pasteJd && found.length > 1 ? ` ${found.length}` : ""}
               </Button>
             </div>
           </div>
@@ -901,33 +901,33 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
   if (!j.busy && !isInFlight(j)) {
     if (isHeld(j))
       action = {
-        label: "现在就跑",
+        label: "Run now",
         key: "now",
         fn: () => api("/jobs/run-now", { body: { ids: [j.id] } }),
       };
     else if (needsYou(j))
       action = {
-        label: "去处理",
+        label: "Open",
         key: "you",
         fn: async () => go("/review"),
         primary: true,
       };
     else if (j.stage === "new")
       action = {
-        label: j.error ? "重新读取" : "读取岗位",
+        label: j.error ? "Read again" : "Read job",
         key: "parse",
         fn: () => api(`/jobs/${j.id}/parse`, { body: {} }),
       };
     else if (j.stage === "parsed")
       action = {
-        label: "改简历",
+        label: "Tailor resume",
         key: "tailor",
         fn: () => api(`/jobs/${j.id}/tailor`, { body: {} }),
         primary: !j.notice,
       };
     else if (j.stage === "tailored")
       action = {
-        label: j.run ? "重新投递" : "开始投递",
+        label: j.run ? "Apply again" : "Start applying",
         key: "apply",
         fn: () => api(`/jobs/${j.id}/apply`, { body: {} }),
         primary: !j.run,
@@ -938,12 +938,12 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
   if (j.error) line = <div className="mt-1 text-[13px] text-red-700">{j.error}</div>;
   else if (j.run?.status === "failed" && j.run.outcome && !applied) line = <div className="mt-1 text-[13px] text-red-700">{j.run.outcome}</div>;
   else if (j.notice) line = <div className="mt-1 text-[13px] text-amber-800">{j.notice}</div>;
-  else if (silent) line = <div className="mt-1 text-[13px] text-muted">投了两周还没回音，可以跟进一下，或者标成未通过。</div>;
-  else if (j.notes) line = <div className="mt-1 truncate text-[13px] text-muted">备注：{j.notes}</div>;
+  else if (silent) line = <div className="mt-1 text-[13px] text-muted">No reply two weeks after applying: follow up, or mark it as rejected.</div>;
+  else if (j.notes) line = <div className="mt-1 truncate text-[13px] text-muted">Notes: {j.notes}</div>;
 
   const control = applied ? (
     <select
-      aria-label="投递后的进展"
+      aria-label="Progress after applying"
       className="h-8 w-28 rounded-md border border-line bg-white px-1.5 text-[13px] outline-none focus:border-brand-500"
       value={j.progress ?? "applied"}
       onChange={(e) =>
@@ -969,7 +969,7 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
 
   return (
     <div className="flex items-start gap-3 px-4 py-3 hover:bg-paper/60">
-      <input type="checkbox" className="mt-1.5 accent-brand-600 sm:mt-3" checked={checked} onChange={(e) => onCheck(e.target.checked)} aria-label="选择" />
+      <input type="checkbox" className="mt-1.5 accent-brand-600 sm:mt-3" checked={checked} onChange={(e) => onCheck(e.target.checked)} aria-label="Select" />
       <Avatar name={j.company || jobName(j)} className="mt-0.5 hidden size-9 sm:grid" />
       <div className="min-w-0 flex-1">
         <button className="block w-full min-w-0 text-left" onClick={() => go(`/jobs/${j.id}`)}>
@@ -978,7 +978,7 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
             <Badge tone={st.tone} pulse={st.pulse}>
               {st.label}
             </Badge>
-            {j.warnings > 0 && !applied && <Badge tone="amber">简历有 {j.warnings} 处要核对</Badge>}
+            {j.warnings > 0 && !applied && <Badge tone="amber">{j.warnings} to check in resume</Badge>}
             {j.nextEvent && hoursUntil(j.nextEvent.at) < 24 * 7 && (
               <span
                 className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${hoursUntil(j.nextEvent.at) < 24 ? "bg-violet-100 font-medium text-violet-800" : "bg-violet-50 text-violet-700"}`}
@@ -990,7 +990,7 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
           </div>
           <div className="mt-0.5 truncate text-[13px] text-muted">
             {[j.company, j.location].filter(Boolean).join(" · ") || j.url}
-            <span className="text-stone-400"> · {applied && j.appliedAt ? `投递于 ${ago(j.appliedAt)}` : `${ago(j.createdAt)}加入`}</span>
+            <span className="text-stone-400"> · {applied && j.appliedAt ? `applied ${ago(j.appliedAt)}` : `added ${ago(j.createdAt)}`}</span>
           </div>
           {chips.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
@@ -1013,8 +1013,8 @@ function JobRow({ job: j, checked, onCheck }: { job: JobView; checked: boolean; 
       <div className="hidden shrink-0 flex-col items-end gap-1 pt-0.5 sm:flex">
         {fit && <FitPill score={fit.score} />}
         {cov && (
-          <div className="text-[11px] text-muted tabular-nums" title="改好的简历里出现的岗位关键词：原版 → 现在 / 总数">
-            关键词 {cov.before.length}→{cov.after.length}/{cov.keywords.length}
+          <div className="text-[11px] text-muted tabular-nums" title="Posting keywords in the resume: original → tailored / total">
+            Keywords {cov.before.length}→{cov.after.length}/{cov.keywords.length}
           </div>
         )}
       </div>
@@ -1038,37 +1038,37 @@ function Setup({ state, onHide }: { state: AppState | null; onHide: () => void }
   }> = [
     {
       done: state.demo || state.settings.hasKey,
-      title: "接上模型",
-      desc: state.demo ? "现在是演示模式，可以先熟悉流程" : "填 DeepSeek API key",
-      cta: "去设置",
+      title: "Connect a model",
+      desc: state.demo ? "Demo mode is on: get to know the flow first" : "Enter a DeepSeek API key",
+      cta: "Open Settings",
       go: () => go("/settings"),
     },
     {
       done: p.basics && p.bullets > 0,
-      title: "核对资料库",
-      desc: "姓名、电话、邮箱和每段经历",
-      cta: "去资料库",
+      title: "Check your profile",
+      desc: "Name, phone, email and every entry",
+      cta: "Open Profile",
       go: () => go("/profile"),
     },
     {
       done: p.facts > 0,
-      title: "补充素材",
-      desc: "简历上没写的实习、项目和数字",
-      cta: "去填写",
+      title: "Add extra facts",
+      desc: "Internships, projects and numbers your resume leaves out",
+      cta: "Add them",
       go: () => go("/profile"),
     },
     {
       done: p.answers > 0 && p.answered >= Math.min(4, p.answers),
-      title: "常见问题",
-      desc: `已回答 ${p.answered}/${p.answers}：工作许可、入职时间…`,
-      cta: "去回答",
+      title: "Common questions",
+      desc: `${p.answered}/${p.answers} answered: work pass, start date…`,
+      cta: "Answer them",
       go: () => go("/profile"),
     },
     {
       done: browserDone,
-      title: "连接你的浏览器",
-      desc: "装一个扩展，助手就在你已登录的 Edge 里开标签页填表",
-      cta: "去设置",
+      title: "Connect your browser",
+      desc: "Install an extension and the agent fills forms in tabs of your signed-in Edge",
+      cta: "Open Settings",
       go: () => go("/settings"),
     },
   ];
@@ -1079,15 +1079,15 @@ function Setup({ state, onHide }: { state: AppState | null; onHide: () => void }
     <Card className="mb-5 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 text-sm font-medium">
-          开始之前
-          <span className="flex items-center gap-1" aria-label={`完成 ${done.length}/${items.length}`}>
+          Before you start
+          <span className="flex items-center gap-1" aria-label={`${done.length}/${items.length} done`}>
             {items.map((it) => (
               <span key={it.title} className={`h-1.5 w-5 rounded-full ${it.done ? "bg-brand-500" : "bg-stone-200"}`} />
             ))}
           </span>
         </div>
         <button className="text-xs text-muted hover:text-ink" onClick={onHide}>
-          不再显示
+          Don't show again
         </button>
       </div>
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

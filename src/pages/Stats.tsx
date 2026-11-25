@@ -14,26 +14,26 @@ export default function StatsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <header>
-        <h1 className="text-xl font-semibold tracking-tight">统计</h1>
-        <p className="mt-1 text-sm text-muted">只算这里记下的岗位（已跳过的不算）。投递后的进展要你在岗位上标，标得越全，这里越准。</p>
+        <h1 className="text-xl font-semibold tracking-tight">Stats</h1>
+        <p className="mt-1 text-sm text-muted">Counts only the jobs recorded here (skipped ones excluded). Progress after applying is whatever you mark on each job: the more you mark, the more accurate this gets.</p>
       </header>
 
       {f.added === 0 ? (
-        <Empty title="还没有数据">加几个岗位、投出去之后，这里会显示投递漏斗、回复率和每周投了多少。</Empty>
+        <Empty title="No data yet">Once you add some jobs and apply, this shows your funnel, reply rate and applications per week.</Empty>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Tile label="已投递" value={String(f.applied)} sub={thisWeek ? `本周 ${thisWeek} 份` : "本周还没投"} />
+            <Tile label="Applied" value={String(f.applied)} sub={thisWeek ? `${thisWeek} this week` : "None this week yet"} />
             <Tile
-              label="回复率"
+              label="Reply rate"
               value={rr.applied ? `${pct(rr.replied, rr.applied)}%` : "—"}
-              sub={rr.applied ? `投满一周的 ${rr.applied} 份里 ${rr.replied} 份有回音` : f.applied ? "投递都还不到一周" : "还没投递"}
+              sub={rr.applied ? `${rr.replied} of ${rr.applied} sent over a week ago got a reply` : f.applied ? "Every application is under a week old" : "No applications yet"}
             />
-            <Tile label="进入面试" value={String(f.interview)} sub={f.offer ? `${f.offer} 个 Offer` : "还没有 Offer"} />
+            <Tile label="Interviews" value={String(f.interview)} sub={f.offer ? `${f.offer} ${f.offer === 1 ? "offer" : "offers"}` : "No offers yet"} />
             <Tile
-              label="回音要等"
-              value={data.medianReplyDays === null ? "—" : data.medianReplyDays < 1 ? "不到 1 天" : `${Math.round(data.medianReplyDays)} 天`}
-              sub="从投递到第一次回音（中位数）"
+              label="Time to reply"
+              value={data.medianReplyDays === null ? "—" : data.medianReplyDays < 1 ? "< 1 day" : `${Math.round(data.medianReplyDays)} ${Math.round(data.medianReplyDays) === 1 ? "day" : "days"}`}
+              sub="From applying to the first reply (median)"
             />
           </div>
 
@@ -44,22 +44,22 @@ export default function StatsPage() {
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Meters
-              title="匹配度和回音"
-              desc="按读取岗位时的匹配度分组。可以拿来定「自动流程的匹配度门槛」：低分组几乎没回音，就把门槛设高一点。"
+              title="Fit and replies"
+              desc="Grouped by the fit score when the job was read. Use it to set the minimum fit for the automatic flow: if low scores hardly ever get a reply, raise it."
               rows={data.byFit}
             />
-            <Meters title="哪个网站回得多" desc="按岗位链接所在的网站分组。" rows={data.bySite} />
+            <Meters title="Which sites reply" desc="Grouped by the site the job link is on." rows={data.bySite} />
           </div>
 
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
             {data.upcoming > 0 && (
               <button className="inline-flex items-center gap-1 text-brand-700 hover:underline" onClick={() => go("/")}>
                 <Icon name="calendar" className="size-3" />
-                接下来有 {data.upcoming} 项日程
+                {data.upcoming} upcoming {data.upcoming === 1 ? "event" : "events"}
               </button>
             )}
-            {data.ended > 0 && <span>已结束 {data.ended} 份（未通过或放弃）</span>}
-            {data.tokens > 0 && <span>模型一共用了 {tokens(data.tokens)} tokens</span>}
+            {data.ended > 0 && <span>{data.ended} ended (rejected or withdrawn)</span>}
+            {data.tokens > 0 && <span>{tokens(data.tokens)} model tokens used in total</span>}
           </div>
         </>
       )}
@@ -81,21 +81,21 @@ function Tile({ label, value, sub }: { label: string; value: string; sub: string
 function Funnel({ f }: { f: Stats["funnel"] }) {
   // Each step is a subset of the one above (tailoring is not: you can apply with the original resume).
   const rows: Array<[string, number]> = [
-    ["加入", f.added],
-    ["已投递", f.applied],
-    ["有回音", f.replied],
-    ["进入面试", f.interview],
-    ["拿到 Offer", f.offer],
+    ["Added", f.added],
+    ["Applied", f.applied],
+    ["Replied", f.replied],
+    ["Interview", f.interview],
+    ["Offer", f.offer],
   ];
   return (
     <Card className="p-5">
-      <h2 className="font-medium">投递漏斗</h2>
-      <p className="mt-0.5 mb-4 text-xs text-muted">每一步走到了多少个岗位；右边是占上一步的比例。「有回音」含被拒。</p>
+      <h2 className="font-medium">Funnel</h2>
+      <p className="mt-0.5 mb-4 text-xs text-muted">How many jobs reached each step; on the right, the share of the step before. "Replied" includes rejections.</p>
       <ul className="space-y-2.5">
         {rows.map(([label, n], i) => {
           const prev = i ? rows[i - 1][1] : 0;
           return (
-            <li key={label} className="grid grid-cols-[5.5rem_minmax(0,1fr)_4.5rem] items-center gap-3 text-[13px]" title={`${label}：${n}`}>
+            <li key={label} className="grid grid-cols-[5.5rem_minmax(0,1fr)_4.5rem] items-center gap-3 text-[13px]" title={`${label}: ${n}`}>
               <span className="text-muted">{label}</span>
               <span className="h-5">
                 {n > 0 && <span className="block h-full rounded-r-[4px] bg-chart" style={{ width: `${Math.max(1.5, pct(n, f.added))}%` }} />}
@@ -109,7 +109,7 @@ function Funnel({ f }: { f: Stats["funnel"] }) {
         })}
       </ul>
       <div className="mt-4 text-xs text-muted">
-        加入的 {f.added} 个里，读取了 {f.parsed} 个，按岗位改过简历的 {f.tailored} 个。
+        Of the {f.added} added, {f.parsed} were read and {f.tailored} got a tailored resume.
       </div>
     </Card>
   );
@@ -126,32 +126,32 @@ function Weekly({ weeks }: { weeks: Stats["weekly"] }) {
   const top = max <= 4 ? 4 : Math.ceil(max / 5) * 5;
   const label = (s: string) => {
     const [, m, d] = s.split("-");
-    return `${Number(m)}/${Number(d)}`;
+    return `${Number(d)}/${Number(m)}`;
   };
   const total = weeks.reduce((n, w) => n + w.applied, 0);
 
   return (
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-medium">每周投递</h2>
+        <h2 className="font-medium">Applications per week</h2>
         <button className="text-xs text-brand-700 hover:underline" onClick={() => setTable(!table)}>
-          {table ? "看图" : "看数字"}
+          {table ? "Chart" : "Numbers"}
         </button>
       </div>
-      <p className="mt-0.5 mb-4 text-xs text-muted">最近 10 周，共 {total} 份；周一开始算一周。</p>
+      <p className="mt-0.5 mb-4 text-xs text-muted">Last 10 weeks, {total} in total; weeks start on Monday.</p>
       {table ? (
         <table className="w-full text-[13px] tabular-nums">
           <thead>
             <tr className="border-b border-line text-xs text-muted">
-              <th className="py-1 text-left font-normal">那一周</th>
-              <th className="py-1 text-right font-normal">加入</th>
-              <th className="py-1 text-right font-normal">投递</th>
+              <th className="py-1 text-left font-normal">Week of</th>
+              <th className="py-1 text-right font-normal">Added</th>
+              <th className="py-1 text-right font-normal">Applied</th>
             </tr>
           </thead>
           <tbody>
             {weeks.map((w) => (
               <tr key={w.start} className="border-b border-line/60 last:border-0">
-                <td className="py-1">{label(w.start)} 起</td>
+                <td className="py-1">{label(w.start)}</td>
                 <td className="py-1 text-right text-muted">{w.added}</td>
                 <td className="py-1 text-right font-medium">{w.applied}</td>
               </tr>
@@ -179,7 +179,7 @@ function Weekly({ weeks }: { weeks: Stats["weekly"] }) {
                   <div
                     key={w.start}
                     tabIndex={0}
-                    aria-label={`${label(w.start)} 那周投了 ${w.applied} 份，加入 ${w.added} 个`}
+                    aria-label={`Week of ${label(w.start)}: ${w.applied} applied, ${w.added} added`}
                     className="group relative flex flex-1 flex-col items-center outline-none"
                     onPointerEnter={() => setHover(i)}
                     onPointerLeave={() => setHover((x) => (x === i ? null : x))}
@@ -198,8 +198,8 @@ function Weekly({ weeks }: { weeks: Stats["weekly"] }) {
                           }`}
                           style={{ bottom: `calc(${h}% + 6px)` }}
                         >
-                          <span className="font-semibold">{w.applied} 份</span>
-                          <span className="text-white/70"> · {label(w.start)} 那周 · 加入 {w.added}</span>
+                          <span className="font-semibold">{w.applied} applied</span>
+                          <span className="text-white/70"> · week of {label(w.start)} · {w.added} added</span>
                         </div>
                       )}
                     </div>
@@ -222,16 +222,16 @@ function Meters({ title, desc, rows }: { title: string; desc: string; rows: Stat
       <h2 className="font-medium">{title}</h2>
       <p className="mt-0.5 mb-4 text-xs text-muted">{desc}</p>
       {!rows.length ? (
-        <div className="text-sm text-muted">投递之后才有。</div>
+        <div className="text-sm text-muted">Shows up once you have applied.</div>
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => (
-            <li key={r.key} className="text-[13px]" title={`${r.label}：投了 ${r.applied}，${r.replied} 份有回音，${r.positive} 份进了笔试/面试/Offer`}>
+            <li key={r.key} className="text-[13px]" title={`${r.label}: ${r.applied} applied, ${r.replied} replied, ${r.positive} reached a test, interview or offer`}>
               <div className="mb-1 flex items-baseline justify-between gap-3">
                 <span className="min-w-0 truncate font-medium">{r.label}</span>
                 <span className="shrink-0 text-xs text-muted tabular-nums">
-                  投了 {r.applied} · <span className="font-medium text-ink">{pct(r.replied, r.applied)}%</span> 有回音
-                  {r.positive > 0 && ` · ${r.positive} 个往下走了`}
+                  {r.applied} applied · <span className="font-medium text-ink">{pct(r.replied, r.applied)}%</span> replied
+                  {r.positive > 0 && ` · ${r.positive} moved forward`}
                 </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-chart-track">
@@ -241,7 +241,7 @@ function Meters({ title, desc, rows }: { title: string; desc: string; rows: Stat
           ))}
         </ul>
       )}
-      {rows.length > 0 && rows.reduce((n, r) => n + r.applied, 0) < 15 && <div className="mt-3 text-xs text-stone-400">投得还少，比例波动会很大，先参考着看。</div>}
+      {rows.length > 0 && rows.reduce((n, r) => n + r.applied, 0) < 15 && <div className="mt-3 text-xs text-stone-400">Still few applications: these rates swing a lot, so take them as a rough guide.</div>}
     </Card>
   );
 }

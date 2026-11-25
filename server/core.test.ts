@@ -735,18 +735,18 @@ test("requirement filters and counts over the job list", async () => {
 
   const s = reqStats(all);
   assert.equal(s.noFacts, 1);
-  assert.deepEqual(s.types, [{ label: "全职", n: 2 }, { label: "兼职实习", n: 1 }]);
-  assert.deepEqual(s.years.map((y) => y.label), ["不要经验", "3 年以上", "没写"]);
+  assert.deepEqual(s.types, [{ label: "Full-time", n: 2 }, { label: "Part-time internship", n: 1 }]);
+  assert.deepEqual(s.years.map((y) => y.label), ["No experience", "3+ years", "Not stated"]);
   assert.deepEqual(s.keywords[0], { k: "Java", n: 3, have: true });
-  assert.ok(s.limits.some((l) => l.label === "已关闭" && l.n === 1));
-  assert.ok(s.materials.some((m) => m.label === "要求职信" && m.n === 1));
+  assert.ok(s.limits.some((l) => l.label === "Closed" && l.n === 1));
+  assert.ok(s.materials.some((m) => m.label === "Asks for cover letter" && m.n === 1));
 
   assert.deepEqual(readFilter("not json"), NO_FILTER);
   assert.deepEqual(readFilter(JSON.stringify({ types: ["fulltime", "bogus"], minFit: "x" })).types, ["fulltime"]);
   assert.deepEqual(readFilter(JSON.stringify({ types: ["internship"] })).types, ["intern_part", "intern_full"], "a filter saved before the split keeps both");
   assert.deepEqual(
     factChips(normalizeFacts({ type: "internship", hours: "part", months: 6, minYears: 2, workAuth: "citizen" })).map((c) => `${c.text}${c.warn ? "!" : ""}`),
-    ["兼职实习 6 个月", "2 年以上经验!", "仅限公民!"],
+    ["Part-time internship, 6 months", "2+ years of experience!", "Citizens only!"],
   );
 });
 

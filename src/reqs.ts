@@ -2,19 +2,23 @@
 // the Excel export and the tests use the same rules.
 import type { JobFacts, JobView, Material } from "./api.ts";
 
-export const TYPE_LABEL: Record<JobFacts["type"], string> = { fulltime: "全职", parttime: "兼职", internship: "实习", contract: "合同工", unknown: "没写" };
-export const DEGREE_LABEL: Record<Exclude<JobFacts["degree"], "">, string> = { none: "不限学历", diploma: "大专", bachelor: "本科", master: "硕士", phd: "博士" };
-export const MATERIAL_LABEL: Record<Material, string> = { cover_letter: "求职信", transcript: "成绩单", portfolio: "作品集", references: "推荐人", other: "其他材料" };
-export const AUTH_LABEL: Record<Exclude<JobFacts["workAuth"], "">, string> = { citizen: "仅限公民", citizen_pr: "仅限公民/PR" };
+export const TYPE_LABEL: Record<JobFacts["type"], string> = { fulltime: "Full-time", parttime: "Part-time", internship: "Internship", contract: "Contract", unknown: "Not stated" };
+export const DEGREE_LABEL: Record<Exclude<JobFacts["degree"], "">, string> = { none: "Any education", diploma: "Diploma", bachelor: "Bachelor's", master: "Master's", phd: "PhD" };
+export const MATERIAL_LABEL: Record<Material, string> = { cover_letter: "Cover letter", transcript: "Transcript", portfolio: "Portfolio", references: "References", other: "Other documents" };
+export const AUTH_LABEL: Record<Exclude<JobFacts["workAuth"], "">, string> = { citizen: "Citizens only", citizen_pr: "Citizens/PR only" };
 
-/** "兼职实习 3 个月", "全职", "" */
+/** "Part-time internship" with the hours stated, "Internship" without. */
+const internLabel = (f: JobFacts) => (f.hours === "part" ? "Part-time internship" : f.hours === "full" ? "Full-time internship" : "Internship");
+const monthsLabel = (n: number | null) => (n ? `, ${n} ${n === 1 ? "month" : "months"}` : "");
+
+/** "Part-time internship, 3 months", "Full-time", "" */
 export function typeLabel(f: JobFacts) {
-  if (f.type === "internship") return `${f.hours === "part" ? "兼职" : f.hours === "full" ? "全职" : ""}实习${f.months ? ` ${f.months} 个月` : ""}`;
-  if (f.type === "contract") return `合同工${f.months ? ` ${f.months} 个月` : ""}`;
+  if (f.type === "internship") return `${internLabel(f)}${monthsLabel(f.months)}`;
+  if (f.type === "contract") return `Contract${monthsLabel(f.months)}`;
   return f.type === "unknown" ? "" : TYPE_LABEL[f.type];
 }
 
-export const yearsLabel = (n: number) => (n === 0 ? "不要经验" : `${n} 年以上经验`);
+export const yearsLabel = (n: number) => (n === 0 ? "No experience needed" : `${n}+ ${n === 1 ? "year" : "years"} of experience`);
 
 /** Short labels for a job's conditions, in a fixed order; the warning ones are flagged. */
 export function factChips(f: JobFacts | null): Array<{ text: string; warn?: boolean }> {
@@ -23,17 +27,17 @@ export function factChips(f: JobFacts | null): Array<{ text: string; warn?: bool
   const t = typeLabel(f);
   if (t) out.push({ text: t });
   if (f.minYears !== null) out.push({ text: yearsLabel(f.minYears), warn: f.minYears >= 2 });
-  if (f.student === "graduated") out.push({ text: "须已毕业", warn: true });
-  if (f.student === "enrolled") out.push({ text: "须在读" });
+  if (f.student === "graduated") out.push({ text: "Graduates only", warn: true });
+  if (f.student === "enrolled") out.push({ text: "Current students only" });
   if (f.workAuth) out.push({ text: AUTH_LABEL[f.workAuth], warn: true });
-  for (const m of f.materials) out.push({ text: `要${MATERIAL_LABEL[m]}` });
-  if (f.start) out.push({ text: `开始 ${f.start}` });
+  for (const m of f.materials) out.push({ text: `Asks for ${MATERIAL_LABEL[m].toLowerCase()}` });
+  if (f.start) out.push({ text: `Starts ${f.start}` });
   return out;
 }
 
 export const KINDS = ["fulltime", "intern_part", "intern_full", "parttime"] as const;
 export type Kind = (typeof KINDS)[number];
-export const KIND_LABEL: Record<Kind, string> = { fulltime: "全职", intern_part: "兼职实习", intern_full: "全职实习", parttime: "兼职" };
+export const KIND_LABEL: Record<Kind, string> = { fulltime: "Full-time", intern_part: "Part-time internship", intern_full: "Full-time internship", parttime: "Part-time" };
 
 /** The kinds a job could be; an internship with no stated hours could be either. */
 function kindsOf(f: JobFacts): Kind[] {
@@ -132,18 +136,18 @@ export function reqStats(jobs: JobView[], topK = 24): ReqStats {
       e.have ||= have.has(key);
       kw.set(key, e);
     }
-    if (isClosed(j)) count(limits, "已关闭");
+    if (isClosed(j)) count(limits, "Closed");
     const f = j.jd?.facts;
     if (!f) {
       noFacts++;
       continue;
     }
-    count(types, typeLabel(f) ? (f.type === "internship" ? `${f.hours === "part" ? "兼职" : f.hours === "full" ? "全职" : ""}实习` : TYPE_LABEL[f.type]) : "没写");
-    count(years, f.minYears === null ? "没写" : f.minYears === 0 ? "不要经验" : f.minYears <= 1 ? "1 年" : f.minYears <= 2 ? "2 年" : "3 年以上");
+    count(types, typeLabel(f) ? (f.type === "internship" ? internLabel(f) : TYPE_LABEL[f.type]) : "Not stated");
+    count(years, f.minYears === null ? "Not stated" : f.minYears === 0 ? "No experience" : f.minYears <= 1 ? "1 year" : f.minYears <= 2 ? "2 years" : "3+ years");
     if (f.workAuth) count(limits, AUTH_LABEL[f.workAuth]);
-    if (f.student === "graduated") count(limits, "须已毕业");
-    if (f.student === "enrolled") count(limits, "须在读");
-    for (const m of f.materials) count(materials, `要${MATERIAL_LABEL[m]}`);
+    if (f.student === "graduated") count(limits, "Graduates only");
+    if (f.student === "enrolled") count(limits, "Current students only");
+    for (const m of f.materials) count(materials, `Asks for ${MATERIAL_LABEL[m].toLowerCase()}`);
   }
   const ordered = (m: Map<string, number>, order?: string[]) =>
     [...m.entries()]
@@ -153,7 +157,7 @@ export function reqStats(jobs: JobView[], topK = 24): ReqStats {
     total: jobs.length,
     noFacts,
     types: ordered(types),
-    years: ordered(years, ["不要经验", "1 年", "2 年", "3 年以上", "没写"]),
+    years: ordered(years, ["No experience", "1 year", "2 years", "3+ years", "Not stated"]),
     limits: ordered(limits),
     materials: ordered(materials),
     // Shown the way most postings write it ("Go", not the one posting's "GO").

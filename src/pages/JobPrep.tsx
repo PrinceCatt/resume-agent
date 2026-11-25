@@ -3,13 +3,13 @@ import { api, daysSince, localTime, type Draft, type DraftKind, type Prep, type 
 import { Badge, Button, Card, Empty, Icon, inputCls, toast, useAction, type Tone } from "../components/ui.tsx";
 
 const QKIND: Record<PrepQuestion["kind"], { label: string; tone: Tone }> = {
-  behavioral: { label: "行为", tone: "blue" },
-  technical: { label: "技术", tone: "violet" },
-  role: { label: "岗位", tone: "green" },
-  resume: { label: "简历", tone: "amber" },
+  behavioral: { label: "Behavioural", tone: "blue" },
+  technical: { label: "Technical", tone: "violet" },
+  role: { label: "Role", tone: "green" },
+  resume: { label: "Resume", tone: "amber" },
 };
 
-const copy = (text: string) => navigator.clipboard.writeText(text).then(() => toast("已复制"), () => toast("复制失败", "err"));
+const copy = (text: string) => navigator.clipboard.writeText(text).then(() => toast("Copied"), () => toast("Could not copy", "err"));
 
 type Props = {
   jobId: number;
@@ -27,8 +27,8 @@ export function PrepTab(props: Props) {
   const { jobId, hasJd, prep, prepping, prepError } = props;
   const { busy, run } = useAction();
   const [open, setOpen] = useState<Set<number>>(new Set());
-  if (!hasJd) return <Empty title="先读取岗位">面试准备要根据岗位要求来写。</Empty>;
-  const start = () => run("prep", () => api(`/jobs/${jobId}/prep`, { body: {} }), prep ? "重新生成中" : "开始生成，大约半分钟");
+  if (!hasJd) return <Empty title="Read the job first">Interview prep is written from the posting's requirements.</Empty>;
+  const start = () => run("prep", () => api(`/jobs/${jobId}/prep`, { body: {} }), prep ? "Writing it again" : "Writing it; takes about half a minute");
   const allOpen = !!prep && open.size === prep.questions.length;
   const unsure = prep ? prep.questions.reduce((n, q) => n + q.points.filter((p) => p.kind === "unsure").length, 0) : 0;
 
@@ -39,20 +39,20 @@ export function PrepTab(props: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Icon name="spark" className="size-4 text-brand-600" />
-              面试准备
+              Interview prep
             </div>
             <div className="mt-0.5 text-[13px] text-muted">
-              按这个岗位和你的资料库写：可能被问的问题和可以讲的经历、自我介绍、反问的问题。只用资料库里的事实。
-              {prep && <span className="text-stone-400"> · 生成于 {localTime(prep.generatedAt)}</span>}
+              Written from this job and your profile: likely questions with experiences you can talk about, a self-introduction and questions to ask. Only facts from your profile.
+              {prep && <span className="text-stone-400"> · written {localTime(prep.generatedAt)}</span>}
             </div>
           </div>
           <Button variant={prep ? "secondary" : "primary"} busy={prepping || busy === "prep"} disabled={prepping} onClick={start}>
-            {prepping ? "生成中…" : prep ? "重新生成" : "生成面试准备"}
+            {prepping ? "Writing…" : prep ? "Write again" : "Write interview prep"}
           </Button>
         </Card>
-        {prepError && !prepping && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">没生成出来：{prepError}</div>}
+        {prepError && !prepping && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">Could not write it: {prepError}</div>}
         {!prep && !prepping && !prepError && (
-          <Empty title="还没有面试准备">{props.applied ? "约到面试之前生成一份，对着练。" : "一般约到面试再生成；现在生成也可以。"}</Empty>
+          <Empty title="No interview prep yet">{props.applied ? "Write one before the interview and practise with it." : "Usually written once you have an interview, but you can write one now."}</Empty>
         )}
         {prepping && !prep && (
           <Card className="space-y-3 p-5">
@@ -69,31 +69,31 @@ export function PrepTab(props: Props) {
             {prep.pitch && (
               <Card className="p-4">
                 <div className="mb-2 flex items-center justify-between">
-                  <div className="text-sm font-medium">自我介绍（30–45 秒）</div>
+                  <div className="text-sm font-medium">Self-introduction (30–45 seconds)</div>
                   <button className="inline-flex items-center gap-1 text-xs text-brand-700 hover:underline" onClick={() => copy(prep.pitch)}>
                     <Icon name="copy" className="size-3" />
-                    复制
+                    Copy
                   </button>
                 </div>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{prep.pitch}</p>
-                {prep.pitchWarnings.length > 0 && <Warnings title="说之前核对一下，这几处资料库里对不上：" items={prep.pitchWarnings} />}
+                {prep.pitchWarnings.length > 0 && <Warnings title="Check before you say it; these don't match your profile:" items={prep.pitchWarnings} />}
               </Card>
             )}
             <Card className="overflow-hidden">
               <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
                 <div className="text-sm font-medium">
-                  可能被问的问题 <span className="font-normal text-muted">（{prep.questions.length}）</span>
+                  Likely questions <span className="font-normal text-muted">({prep.questions.length})</span>
                 </div>
                 <button className="text-xs text-brand-700 hover:underline" onClick={() => setOpen(allOpen ? new Set() : new Set(prep.questions.map((_, i) => i)))}>
-                  {allOpen ? "全部收起" : "全部展开"}
+                  {allOpen ? "Collapse all" : "Expand all"}
                 </button>
               </div>
               <div className="px-4 pt-2 text-xs text-muted">
-                先自己想怎么答，再点开看可以讲的经历。绿点是资料库里写过的事，「思路」是答题方法，不是你的经历。
+                Think about your answer first, then open a question to see experiences you can use. Green dots are things in your profile; "Approach" marks advice on answering, not your experience.
               </div>
               {unsure > 0 && (
                 <div className="mx-4 mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  有 {unsure} 条要点在资料库里找不到依据（标黄）。别照着说：真做过就补进资料库，这里会自动变绿；没做过就别提。
+                  {unsure} {unsure === 1 ? "point has" : "points have"} nothing in your profile to back {unsure === 1 ? "it" : "them"} up (in yellow). Don't repeat {unsure === 1 ? "it" : "them"} as written: if you really did it, add it to your profile and it turns green here; if not, leave it out.
                 </div>
               )}
               <ol className="divide-y divide-line">
@@ -123,7 +123,7 @@ export function PrepTab(props: Props) {
                           {!on && q.points.some((p) => p.kind === "unsure") && (
                             <span className="mt-1 inline-flex items-center gap-1 text-[11px] text-amber-700">
                               <span className="size-1.5 rounded-full bg-amber-500" />
-                              {q.points.filter((p) => p.kind === "unsure").length} 条要点待核对
+                              {q.points.filter((p) => p.kind === "unsure").length} to check
                             </span>
                           )}
                         </span>
@@ -146,13 +146,13 @@ export function PrepTab(props: Props) {
             <div className="grid gap-4 md:grid-cols-2">
               {prep.toAsk.length > 0 && (
                 <Card className="p-4">
-                  <div className="mb-2 text-sm font-medium">可以反问面试官</div>
+                  <div className="mb-2 text-sm font-medium">Questions to ask the interviewer</div>
                   <ul className="list-disc space-y-1 pl-5 text-[13px]">{prep.toAsk.map((t, i) => <li key={i}>{t}</li>)}</ul>
                 </Card>
               )}
               {prep.gaps.length > 0 && (
                 <Card className="p-4">
-                  <div className="mb-2 text-sm font-medium">短板怎么说</div>
+                  <div className="mb-2 text-sm font-medium">How to talk about gaps</div>
                   <ul className="space-y-2 text-[13px]">
                     {prep.gaps.map((g, i) => (
                       <li key={i}>
@@ -177,7 +177,7 @@ function Point({ p }: { p: PrepPoint }) {
   if (p.kind === "tip")
     return (
       <li className="flex gap-2 text-muted">
-        <span className="mt-px h-fit shrink-0 rounded bg-stone-100 px-1 text-[11px] text-stone-500">思路</span>
+        <span className="mt-px h-fit shrink-0 rounded bg-stone-100 px-1 text-[11px] text-stone-500">Approach</span>
         <span>{p.text}</span>
       </li>
     );
@@ -196,7 +196,7 @@ function Point({ p }: { p: PrepPoint }) {
       <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-brand-500" />
       <span>
         {p.text}
-        {p.from && <span className="ml-1.5 text-[11px] whitespace-nowrap text-stone-400">出自：{p.from}</span>}
+        {p.from && <span className="ml-1.5 text-[11px] whitespace-nowrap text-stone-400">From: {p.from}</span>}
       </span>
     </li>
   );
@@ -216,8 +216,8 @@ function Warnings({ title, items }: { title: string; items: string[] }) {
 }
 
 const DRAFTS: Array<{ key: DraftKind; label: string; hint: string; extra: string }> = [
-  { key: "followup", label: "跟进邮件", hint: "投了一段时间没回音时，礼貌问一下进度。", extra: "补充（可选），比如联系人名字" },
-  { key: "thanks", label: "面试后感谢信", hint: "面试当天或第二天发。", extra: "面试官名字、聊了什么（可选，写了会更具体）" },
+  { key: "followup", label: "Follow-up", hint: "When you have heard nothing for a while after applying: politely ask how it stands.", extra: "Anything to add (optional), e.g. the contact's name" },
+  { key: "thanks", label: "Thank-you note", hint: "Send it on the day of the interview or the day after.", extra: "Interviewer's name, what you talked about (optional; makes it more specific)" },
 ];
 
 function Drafts({ jobId, applied, appliedAt, drafts }: Props) {
@@ -249,7 +249,7 @@ function Drafts({ jobId, applied, appliedAt, drafts }: Props) {
     <Card className="h-fit overflow-hidden xl:sticky xl:top-6">
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5 text-sm font-medium">
         <Icon name="mail" className="size-4 text-stone-400" />
-        邮件草稿
+        Email drafts
       </div>
       <div className="flex gap-1 border-b border-line px-3 pt-2">
         {DRAFTS.map((x) => (
@@ -267,24 +267,24 @@ function Drafts({ jobId, applied, appliedAt, drafts }: Props) {
         <div className="text-xs text-muted">{d.hint}</div>
         <textarea className={`${inputCls} min-h-14 text-[13px]`} placeholder={d.extra} value={extra} onChange={(e) => setExtra(e.target.value)} />
         <Button size="sm" variant={body ? "secondary" : "primary"} busy={busy === "draft"} onClick={write}>
-          {body ? "重新写" : "写草稿"}
+          {body ? "Write again" : "Write draft"}
         </Button>
         {body && (
           <div className="space-y-2 border-t border-line pt-3">
-            <input className={`${inputCls} text-[13px] font-medium`} value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="邮件标题" />
-            <textarea className={`${inputCls} min-h-56 text-[13px] leading-relaxed`} value={body} onChange={(e) => setBody(e.target.value)} aria-label="邮件正文" />
+            <input className={`${inputCls} text-[13px] font-medium`} value={subject} onChange={(e) => setSubject(e.target.value)} aria-label="Email subject" />
+            <textarea className={`${inputCls} min-h-56 text-[13px] leading-relaxed`} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Email body" />
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <button className="inline-flex items-center gap-1 text-brand-700 hover:underline" onClick={() => copy(`${subject}\n\n${body}`)}>
                 <Icon name="copy" className="size-3" />
-                复制标题和正文
+                Copy subject and body
               </button>
               <a className="inline-flex items-center gap-1 text-brand-700 hover:underline" href={mailto}>
                 <Icon name="external" className="size-3" />
-                用邮件 App 打开
+                Open in mail app
               </a>
             </div>
-            {warnings.length > 0 && <Warnings title="核对一下：" items={warnings} />}
-            <div className="text-[11px] text-stone-400">这里的修改不会保存；发之前再读一遍，把收件人填上。</div>
+            {warnings.length > 0 && <Warnings title="Please check:" items={warnings} />}
+            <div className="text-[11px] text-stone-400">Edits here are not saved. Read it once more before sending, and fill in the recipient.</div>
           </div>
         )}
       </div>

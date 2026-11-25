@@ -5,12 +5,12 @@ import { jobName, jobStatus } from "../status.ts";
 
 type ColKey = "prep" | "applied" | "screening" | "interview" | "offer" | "ended";
 const COLS: Array<{ key: ColKey; label: string; empty: string }> = [
-  { key: "prep", label: "准备中", empty: "没有待投的岗位" },
-  { key: "applied", label: "等回音", empty: "投出去的会在这里" },
-  { key: "screening", label: "笔试/测评", empty: "" },
-  { key: "interview", label: "面试中", empty: "" },
-  { key: "offer", label: "拿到 Offer", empty: "" },
-  { key: "ended", label: "已结束", empty: "未通过 / 我放弃了" },
+  { key: "prep", label: "Preparing", empty: "No jobs waiting to be sent" },
+  { key: "applied", label: "Awaiting reply", empty: "Applications you send show up here" },
+  { key: "screening", label: "Assessment", empty: "" },
+  { key: "interview", label: "Interviewing", empty: "" },
+  { key: "offer", label: "Offer", empty: "" },
+  { key: "ended", label: "Ended", empty: "Rejected / withdrawn" },
 ];
 
 function colOf(j: JobView): ColKey {
@@ -28,10 +28,10 @@ export function Board({ jobs }: { jobs: JobView[] }) {
     const j = jobs.find((x) => x.id === id);
     if (!j || col === "prep" || colOf(j) === col) return;
     const progress: Progress = col === "ended" ? "rejected" : col;
-    if (j.stage !== "applied" && !confirm(`把「${jobName(j)}」标为已投递（你自己投的）？`)) return;
+    if (j.stage !== "applied" && !confirm(`Mark "${jobName(j)}" as applied (you sent it yourself)?`)) return;
     try {
       await api(`/jobs/${id}`, { method: "PATCH", body: { progress } });
-      toast(`已移到「${COLS.find((c) => c.key === col)!.label}」`);
+      toast(`Moved to "${COLS.find((c) => c.key === col)!.label}"`);
     } catch (e) {
       toast(e instanceof Error ? e.message : String(e), "err");
     }
@@ -77,7 +77,7 @@ export function Board({ jobs }: { jobs: JobView[] }) {
               ))}
               {!list.length && (
                 <div className="grid flex-1 place-items-center rounded-md border border-dashed border-line px-3 py-4 text-center text-xs text-stone-400">
-                  {target ? "拖到这里" : c.empty || "空"}
+                  {target ? "Drop here" : c.empty || "Empty"}
                 </div>
               )}
             </div>
@@ -127,12 +127,12 @@ function Card({ job: j, col, dragging, onDragStart, onDragEnd }: { job: JobView;
             {whenLabel(ev.at)} {eventLabel(ev.kind)}
           </div>
         )}
-        <div className="mt-1.5 text-[11px] text-stone-400">{j.stage === "applied" && j.appliedAt ? `投递于 ${ago(j.appliedAt)}` : `${ago(j.createdAt)}加入`}</div>
+        <div className="mt-1.5 text-[11px] text-stone-400">{j.stage === "applied" && j.appliedAt ? `Applied ${ago(j.appliedAt)}` : `Added ${ago(j.createdAt)}`}</div>
       </button>
       {j.stage === "applied" && (
         // Touch screens cannot drag: a small picker instead.
         <select
-          aria-label="移到"
+          aria-label="Move to"
           className="mt-2 hidden h-7 w-full rounded border border-line bg-white px-1 text-xs pointer-coarse:block"
           value={j.progress ?? "applied"}
           onChange={(e) => api(`/jobs/${j.id}`, { method: "PATCH", body: { progress: e.target.value } }).catch((err) => toast(err.message, "err"))}

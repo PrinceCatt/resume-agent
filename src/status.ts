@@ -3,24 +3,24 @@ import type { Tone } from "./components/ui.tsx";
 import { isPeak, peakEndLabel } from "./offpeak.ts";
 
 export function jobStatus(j: JobView): { label: string; tone: Tone; pulse?: boolean } {
-  if (j.busy === "parsing") return { label: "读取岗位中", tone: "blue", pulse: true };
-  if (j.busy === "tailoring") return { label: "改简历中", tone: "blue", pulse: true };
-  if (j.held) return isPeak() ? { label: `等闲时 · ${peakEndLabel()}`, tone: "gray" } : { label: "排队处理", tone: "blue" };
+  if (j.busy === "parsing") return { label: "Reading job", tone: "blue", pulse: true };
+  if (j.busy === "tailoring") return { label: "Tailoring resume", tone: "blue", pulse: true };
+  if (j.held) return isPeak() ? { label: `Off-peak · ${peakEndLabel()}`, tone: "gray" } : { label: "Queued", tone: "blue" };
   const r = j.run;
-  if (r?.status === "queued") return { label: "排队投递", tone: "blue" };
-  if (r?.status === "running") return { label: "填写中", tone: "blue", pulse: true };
-  if (r?.status === "need_user") return { label: "等你处理", tone: "amber" };
-  if (r?.status === "awaiting_confirm") return { label: "待确认提交", tone: "amber" };
+  if (r?.status === "queued") return { label: "Queued to apply", tone: "blue" };
+  if (r?.status === "running") return { label: "Filling in", tone: "blue", pulse: true };
+  if (r?.status === "need_user") return { label: "Needs you", tone: "amber" };
+  if (r?.status === "awaiting_confirm") return { label: "Ready to submit", tone: "amber" };
   if (j.stage === "applied") {
     const p = PROGRESS.find((x) => x.key === (j.progress ?? "applied"))!;
-    return { label: p.key === "applied" ? "已投递" : p.label, tone: p.tone };
+    return { label: p.key === "applied" ? "Applied" : p.label, tone: p.tone };
   }
-  if (j.stage === "skipped") return { label: "已跳过", tone: "gray" };
-  if (j.error) return { label: "出错", tone: "red" };
-  if (r?.status === "failed" || r?.status === "interrupted") return { label: "投递没完成", tone: "red" };
-  if (j.stage === "tailored") return { label: "简历已改好", tone: "violet" };
-  if (j.stage === "parsed") return { label: "已读取", tone: "gray" };
-  return { label: "新加入", tone: "gray" };
+  if (j.stage === "skipped") return { label: "Skipped", tone: "gray" };
+  if (j.error) return { label: "Error", tone: "red" };
+  if (r?.status === "failed" || r?.status === "interrupted") return { label: "Application not finished", tone: "red" };
+  if (j.stage === "tailored") return { label: "Resume tailored", tone: "violet" };
+  if (j.stage === "parsed") return { label: "Read", tone: "gray" };
+  return { label: "New", tone: "gray" };
 }
 
 export function isInFlight(j: JobView) {
@@ -43,7 +43,7 @@ export function jobName(j: { title: string | null; company: string | null; url: 
   try {
     return new URL(j.url).hostname.replace(/^www\./, "");
   } catch {
-    return "粘贴的 JD";
+    return "Pasted JD";
   }
 }
 

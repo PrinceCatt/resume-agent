@@ -25,12 +25,12 @@ export function Schedule({ jobId, events, applied }: { jobId: number; events: Ca
       <div className="mb-1.5 flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5 text-sm font-medium">
           <Icon name="calendar" className="size-4 text-stone-400" />
-          日程
+          Schedule
         </span>
         {editing === null && (
           <button className="inline-flex items-center gap-1 text-xs text-brand-700 hover:underline" onClick={() => setEditing("new")}>
             <Icon name="plus" className="size-3" />
-            {applied ? "加面试 / 笔试" : "加截止日期 / 日程"}
+            {applied ? "Add interview / test" : "Add deadline / event"}
           </button>
         )}
       </div>
@@ -43,7 +43,7 @@ export function Schedule({ jobId, events, applied }: { jobId: number; events: Ca
         />
       )}
       {!upcoming.length && editing === null && (
-        <div className="text-xs text-muted">{applied ? "约了面试或笔试就记在这里，会在开始前提醒你，也能加到日历。" : "有投递截止日期可以记在这里。"}</div>
+        <div className="text-xs text-muted">{applied ? "Got an interview or a test? Note it here: you get a reminder before it starts, and you can add it to your calendar." : "Note the application deadline here if there is one."}</div>
       )}
       <ul className="space-y-1">
         {[...upcoming, ...(showPast ? done : [])].map((e) => {
@@ -55,7 +55,7 @@ export function Schedule({ jobId, events, applied }: { jobId: number; events: Ca
               <span className={`size-2 shrink-0 rounded-full ${isPast ? "bg-stone-300" : (EVENT_KINDS.find((k) => k.key === e.kind)?.dot ?? "bg-stone-400")}`} />
               <span className={`tabular-nums ${!isPast && h < 24 ? "font-medium text-violet-800" : ""} ${e.done ? "line-through" : ""}`}>{whenLabel(e.at)}</span>
               <span className={`font-medium ${e.done ? "line-through" : ""}`}>{eventLabel(e.kind)}</span>
-              {e.kind !== "deadline" && <span className="text-xs text-muted">{e.minutes} 分钟</span>}
+              {e.kind !== "deadline" && <span className="text-xs text-muted">{e.minutes} min</span>}
               {e.note && (
                 <span className="min-w-0 flex-1 truncate text-xs text-muted" title={e.note}>
                   {link ? (
@@ -69,25 +69,25 @@ export function Schedule({ jobId, events, applied }: { jobId: number; events: Ca
               )}
               <span className="ml-auto flex shrink-0 items-center gap-2 text-xs opacity-70 group-hover:opacity-100">
                 {!isPast && (
-                  <a className="text-brand-700 hover:underline" href={`/api/schedule/${e.id}/calendar.ics`} title="下载 .ics，双击加到 Outlook / 日历">
-                    加到日历
+                  <a className="text-brand-700 hover:underline" href={`/api/schedule/${e.id}/calendar.ics`} title="Download an .ics file; open it to add the event to Outlook or your calendar">
+                    Add to calendar
                   </a>
                 )}
                 <button className="text-muted hover:text-ink" onClick={() => setEditing(e)}>
-                  改
+                  Edit
                 </button>
                 <button
                   className="text-muted hover:text-ink"
                   disabled={busy === `done-${e.id}`}
                   onClick={() => run(`done-${e.id}`, () => api(`/schedule/${e.id}`, { method: "PATCH", body: { done: !e.done } }))}
                 >
-                  {e.done ? "撤销完成" : "完成"}
+                  {e.done ? "Not done" : "Done"}
                 </button>
                 <button
                   className="text-muted hover:text-red-700"
-                  onClick={() => confirm(`删除这条日程（${eventLabel(e.kind)} ${whenLabel(e.at)}）？`) && run(`del-${e.id}`, () => api(`/schedule/${e.id}`, { method: "DELETE" }))}
+                  onClick={() => confirm(`Delete this event (${eventLabel(e.kind)} ${whenLabel(e.at)})?`) && run(`del-${e.id}`, () => api(`/schedule/${e.id}`, { method: "DELETE" }))}
                 >
-                  删除
+                  Delete
                 </button>
               </span>
             </li>
@@ -96,7 +96,7 @@ export function Schedule({ jobId, events, applied }: { jobId: number; events: Ca
       </ul>
       {done.length > 0 && (
         <button className="mt-1 px-2 text-xs text-muted hover:text-ink" onClick={() => setShowPast(!showPast)}>
-          {showPast ? "收起过去的日程" : `过去的 ${done.length} 项`}
+          {showPast ? "Hide past events" : `${done.length} past`}
         </button>
       )}
     </div>
@@ -117,13 +117,13 @@ function EventForm({ jobId, initial, defaultKind, onDone }: { jobId: number; ini
       "save",
       async () => {
         const when = new Date(at);
-        if (Number.isNaN(when.getTime())) throw new Error("时间不对");
+        if (Number.isNaN(when.getTime())) throw new Error("That time is not valid");
         const body = { kind, at: when.toISOString(), minutes, note };
         if (initial) await api(`/schedule/${initial.id}`, { method: "PATCH", body });
         else await api(`/jobs/${jobId}/schedule`, { body });
         onDone();
       },
-      initial ? "日程已更新" : "已记下",
+      initial ? "Event updated" : "Saved",
     );
   return (
     <div className="mb-2 space-y-2 rounded-md border border-line bg-paper/60 p-3">
@@ -139,12 +139,12 @@ function EventForm({ jobId, initial, defaultKind, onDone }: { jobId: number; ini
         ))}
       </div>
       <div className="grid gap-2 sm:grid-cols-[auto_auto_1fr]">
-        <input type="datetime-local" className={`${inputCls} sm:w-52`} value={at} onChange={(e) => setAt(e.target.value)} aria-label="时间" />
+        <input type="datetime-local" className={`${inputCls} sm:w-52`} value={at} onChange={(e) => setAt(e.target.value)} aria-label="Time" />
         {kind !== "deadline" ? (
-          <select className={`${inputCls} sm:w-28`} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} aria-label="时长">
+          <select className={`${inputCls} sm:w-28`} value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} aria-label="Duration">
             {[...new Set([...DURATIONS, minutes])].sort((a, b) => a - b).map((m) => (
               <option key={m} value={m}>
-                {m} 分钟
+                {m} min
               </option>
             ))}
           </select>
@@ -153,7 +153,7 @@ function EventForm({ jobId, initial, defaultKind, onDone }: { jobId: number; ini
         )}
         <input
           className={inputCls}
-          placeholder={kind === "deadline" ? "备注（可选）" : "会议链接、地点或面试官（可选）"}
+          placeholder={kind === "deadline" ? "Note (optional)" : "Meeting link, place or interviewer (optional)"}
           value={note}
           onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && save()}
@@ -161,12 +161,12 @@ function EventForm({ jobId, initial, defaultKind, onDone }: { jobId: number; ini
       </div>
       <div className="flex items-center gap-2">
         <Button size="sm" variant="primary" busy={busy === "save"} onClick={save}>
-          保存
+          Save
         </Button>
         <Button size="sm" variant="ghost" onClick={onDone}>
-          取消
+          Cancel
         </Button>
-        <span className="text-xs text-muted">{kind === "deadline" ? "截止前一天提醒" : "开始前一小时提醒（设置里打开通知后）"}</span>
+        <span className="text-xs text-muted">{kind === "deadline" ? "Reminder a day before" : "Reminder an hour before (with notifications on in Settings)"}</span>
       </div>
     </div>
   );

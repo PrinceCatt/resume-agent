@@ -112,8 +112,8 @@ export function Icon({ name, className = "size-4" }: { name: IconName; className
 export function FitPill({ score, className = "" }: { score: number; className?: string }) {
   const t = score >= 70 ? "bg-brand-50 text-brand-700" : score >= 50 ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${t} ${className}`} title="匹配度：资料和岗位必备要求的吻合程度">
-      匹配 {score}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${t} ${className}`} title="Fit: how well your profile meets the job's must-haves">
+      Fit {score}
     </span>
   );
 }

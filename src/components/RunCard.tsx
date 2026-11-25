@@ -43,16 +43,16 @@ export function RunCard({
         <Badge tone={tone} pulse={r.status === "running"}>
           {RUN_LABEL[r.status]}
         </Badge>
-        <span className="text-xs text-muted">第 {r.steps} 步</span>
+        <span className="text-xs text-muted">Step {r.steps}</span>
         <div className="ml-auto flex gap-1">
           {r.live && (
             <Button size="sm" variant="ghost" busy={busy === "focus"} onClick={focus}>
-              在浏览器里看
+              Show in browser
             </Button>
           )}
           {r.live && (
-            <Button size="sm" variant="ghost" busy={busy === "cancel"} onClick={() => send("cancel", { type: "cancel" }, "已放弃这份申请")}>
-              放弃
+            <Button size="sm" variant="ghost" busy={busy === "cancel"} onClick={() => send("cancel", { type: "cancel" }, "Application abandoned")}>
+              Abandon
             </Button>
           )}
         </div>
@@ -61,23 +61,23 @@ export function RunCard({
       {p?.kind === "ask" && (
         <div className="space-y-2 px-4 py-3">
           <div className="text-sm">{p.question}</div>
-          {p.field && <div className="text-xs text-muted">表单上的字段：{p.field}</div>}
+          {p.field && <div className="text-xs text-muted">Form field: {p.field}</div>}
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
               className={inputCls}
               autoFocus
               value={answer}
-              placeholder="你的回答"
+              placeholder="Your answer"
               onChange={(e) => setAnswer(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && answer.trim() && send("answer", { type: "answer", answer, remember })}
             />
             <Button variant="primary" disabled={!answer.trim()} busy={busy === "answer"} onClick={() => send("answer", { type: "answer", answer, remember })}>
-              回答
+              Answer
             </Button>
           </div>
           <label className="flex items-center gap-2 text-xs text-muted">
             <input type="checkbox" className="accent-brand-600" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            记进资料库，以后遇到同样的问题直接用
+            Save to my profile and use it next time this comes up
           </label>
         </div>
       )}
@@ -86,9 +86,9 @@ export function RunCard({
         <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
           <div className="flex-1 text-sm">{p.reason}</div>
           <div className="flex gap-2">
-            <Button onClick={focus}>去浏览器</Button>
+            <Button onClick={focus}>Go to browser</Button>
             <Button variant="primary" busy={busy === "resume"} onClick={() => send("resume", { type: "resume" })}>
-              处理好了，继续
+              Done, continue
             </Button>
           </div>
         </div>
@@ -110,48 +110,48 @@ export function RunCard({
             </table>
             {revising ? (
               <div className="flex flex-col gap-2 sm:flex-row">
-                <input className={inputCls} autoFocus value={feedback} placeholder="哪里要改？比如：电话前面加 +65" onChange={(e) => setFeedback(e.target.value)} />
+                <input className={inputCls} autoFocus value={feedback} placeholder="What should change? E.g. add +65 before the phone number" onChange={(e) => setFeedback(e.target.value)} />
                 <Button
                   disabled={!feedback.trim()}
                   busy={busy === "revise"}
                   onClick={() => send("revise", { type: "revise", feedback }).then(() => setRevising(false))}
                 >
-                  让它改
+                  Ask for changes
                 </Button>
               </div>
             ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="primary" busy={busy === "confirm"} onClick={() => send("confirm", { type: "confirm" }, "已确认，正在提交")}>
-                确认提交
+              <Button variant="primary" busy={busy === "confirm"} onClick={() => send("confirm", { type: "confirm" }, "Confirmed, submitting")}>
+                Confirm and submit
               </Button>
-              {!revising && <Button onClick={() => setRevising(true)}>要修改</Button>}
-              <span className="text-xs text-muted">将点击「{p.targetText}」。也可以先在浏览器里手动改，再回来确认。</span>
+              {!revising && <Button onClick={() => setRevising(true)}>Needs changes</Button>}
+              <span className="text-xs text-muted">Will click "{p.targetText}". You can also make changes in the browser yourself, then come back and confirm.</span>
               <a className="text-xs text-brand-700 hover:underline" href={`/api/jobs/${r.job_id}/resume.pdf`} target="_blank" rel="noreferrer">
-                看上传的简历
+                View uploaded resume
               </a>
             </div>
           </div>
-          <a href={`/api/shots/${p.screenshot}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-line" title="点开看完整截图">
-            <img src={`/api/shots/${p.screenshot}`} alt="填好的表单截图" className="max-h-80 w-full object-cover object-top" />
+          <a href={`/api/shots/${p.screenshot}`} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-md border border-line" title="Open the full screenshot">
+            <img src={`/api/shots/${p.screenshot}`} alt="Screenshot of the filled-in form" className="max-h-80 w-full object-cover object-top" />
           </a>
         </div>
       )}
 
       {!p && r.outcome && <div className={`px-4 py-2.5 text-sm ${r.status === "failed" ? "text-red-700" : "text-muted"}`}>{r.outcome}</div>}
-      {!p && r.status === "running" && <div className="px-4 py-2.5 text-sm text-muted">正在填写，表单在你浏览器里助手开的标签页上，可以随时切过去看。</div>}
-      {!p && r.status === "queued" && <div className="px-4 py-2.5 text-sm text-muted">排队中，前面的申请填完就轮到它。</div>}
+      {!p && r.status === "running" && <div className="px-4 py-2.5 text-sm text-muted">Filling in. The form is in the tab the agent opened in your browser; switch to it any time to watch.</div>}
+      {!p && r.status === "queued" && <div className="px-4 py-2.5 text-sm text-muted">Queued. It starts when the applications ahead of it are done.</div>}
       {r.shot && p?.kind !== "review" && (r.live || showLastScreen) && (
         <div className="border-t border-line px-4 py-3">
           <div className="mb-1.5 flex items-center justify-between text-xs text-muted">
             <span className="flex items-center gap-1.5">
               {r.live && r.status === "running" && <span className="size-1.5 animate-pulse rounded-full bg-sky-500" />}
-              {r.live ? "实时画面（每一步刷新一次）" : "停下时的画面"}
+              {r.live ? "Live view (refreshes every step)" : "Where it stopped"}
             </span>
             <a href={`/api/shots/${r.shot}`} target="_blank" rel="noreferrer" className="text-brand-700 hover:underline">
-              看大图
+              View full size
             </a>
           </div>
-          <img src={`/api/shots/${r.shot}`} alt="助手浏览器里的页面" className="max-h-72 w-full rounded-md border border-line object-cover object-top" />
+          <img src={`/api/shots/${r.shot}`} alt="The page in the agent's browser tab" className="max-h-72 w-full rounded-md border border-line object-cover object-top" />
         </div>
       )}
     </Card>

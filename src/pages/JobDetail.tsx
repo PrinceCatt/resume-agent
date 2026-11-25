@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, go, localTime, PROGRESS, rmb, tokens, useApi, type CalEvent, type Draft, type DraftKind, type Fit, type JobFacts, type JobView, type Prep, type Progress, type ResumeDoc, type RunView, type Step, type Tailored } from "../api.ts";
+import { api, go, localDay, localTime, PROGRESS, rmb, tokens, useApi, type CalEvent, type Draft, type DraftKind, type Fit, type JobFacts, type JobView, type Prep, type Progress, type ResumeDoc, type RunView, type Step, type Tailored } from "../api.ts";
 import { RunCard } from "../components/RunCard.tsx";
 import { Schedule } from "../components/Schedule.tsx";
 import { PrepTab } from "./JobPrep.tsx";
@@ -36,7 +36,7 @@ export default function JobDetailPage({ id }: { id: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!data]);
 
-  if (error) return <Empty title="打不开这个岗位">{error}</Empty>;
+  if (error) return <Empty title="Could not open this job">{error}</Empty>;
   if (!data) return null;
   const j = data.job;
   const st = jobStatus(j);
@@ -47,7 +47,7 @@ export default function JobDetailPage({ id }: { id: number }) {
   return (
     <div className="mx-auto max-w-6xl">
       <button className="mb-3 text-sm text-muted hover:text-ink" onClick={() => go("/")}>
-        ← 岗位
+        ← Jobs
       </button>
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -61,13 +61,13 @@ export default function JobDetailPage({ id }: { id: number }) {
             {[j.company, j.location].filter(Boolean).join(" · ")}
             {j.url && (
               <a href={j.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:underline">
-                原页面
+                Original page
                 <Icon name="external" className="size-3" />
               </a>
             )}
             {j.tokens > 0 && (
-              <span className="text-xs text-stone-400" title="这个岗位读取、改简历、填表一共用掉的模型 token；钱数按 DeepSeek 价目和每次调用的时段（高峰 / 闲时）估算">
-                用了 {tokens(j.tokens)} tokens · 约 {rmb(j.cost)}
+              <span className="text-xs text-stone-400" title="Model tokens used on this job for reading, tailoring and form filling; the cost is estimated from DeepSeek's prices and the time of each call (peak / off-peak)">
+                {tokens(j.tokens)} tokens · about {rmb(j.cost)}
               </span>
             )}
           </div>
@@ -76,47 +76,47 @@ export default function JobDetailPage({ id }: { id: number }) {
           {isHeld(j) && (
             <div className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-muted">
               {isPeak()
-                ? `在等 DeepSeek 闲时，${peakEndLabel()} 以后自动${j.held === "apply" ? "开始填表" : "改简历"}（那时半价）。`
-                : `在排队，有空位就${j.held === "apply" ? "开始填表" : "改简历"}。`}
+                ? `Waiting for DeepSeek's off-peak hours: ${j.held === "apply" ? "form filling" : "tailoring"} starts by itself after ${peakEndLabel()} (half price then).`
+                : `Queued: ${j.held === "apply" ? "form filling" : "tailoring"} starts as soon as a slot is free.`}
               <button
                 className="text-brand-700 hover:underline disabled:opacity-50"
                 disabled={busy === "now"}
-                onClick={() => void run("now", () => api("/jobs/run-now", { body: { ids: [id] } }), "开始处理")}
+                onClick={() => void run("now", () => api("/jobs/run-now", { body: { ids: [id] } }), "Started")}
               >
-                现在就跑
+                Run now
               </button>
             </div>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button busy={busy === "tailor"} disabled={flight || !j.jd} onClick={() => run("tailor", () => api(`/jobs/${id}/tailor`, { body: {} }), "开始改简历")}>
-            {data.tailored ? "重新改简历" : "改简历"}
+          <Button busy={busy === "tailor"} disabled={flight || !j.jd} onClick={() => run("tailor", () => api(`/jobs/${id}/tailor`, { body: {} }), "Tailoring the resume")}>
+            {data.tailored ? "Tailor again" : "Tailor resume"}
           </Button>
           <Button
             variant="primary"
             busy={busy === "apply"}
             disabled={flight || !j.url || waiting}
             onClick={() => {
-              if (j.stage === "applied" && !confirm("这个岗位已经投过了，确定再投一次？")) return;
+              if (j.stage === "applied" && !confirm("You already applied to this job. Apply again?")) return;
               void run("apply", async () => {
                 await api(`/jobs/${id}/apply`, { body: {} });
                 setTab("runs");
-              }, "开始填写申请表");
+              }, "Filling in the application");
             }}
           >
-            {j.run ? "再投一次" : "开始投递"}
+            {j.run ? "Apply again" : "Start applying"}
           </Button>
           <Menu
-            label="更多"
+            label="More"
             items={[
-              { label: "重新读取岗位", onClick: () => void run("parse", () => api(`/jobs/${id}/parse`, { body: {} }), "重新读取中"), hidden: flight },
-              { label: "标为已投递（我自己投的）", onClick: () => void patch({ stage: "applied" }, "已标为已投递"), hidden: j.stage === "applied" },
-              { label: j.stage === "skipped" ? "恢复" : "跳过这个岗位", onClick: () => void patch({ stage: j.stage === "skipped" ? "restore" : "skipped" }) },
+              { label: "Re-read job", onClick: () => void run("parse", () => api(`/jobs/${id}/parse`, { body: {} }), "Reading it again"), hidden: flight },
+              { label: "Mark as applied (I sent it myself)", onClick: () => void patch({ stage: "applied" }, "Marked as applied"), hidden: j.stage === "applied" },
+              { label: j.stage === "skipped" ? "Restore" : "Skip this job", onClick: () => void patch({ stage: j.stage === "skipped" ? "restore" : "skipped" }) },
               {
-                label: "删除",
+                label: "Delete",
                 danger: true,
                 onClick: () => {
-                  if (confirm("删除这个岗位、它的简历和投递记录？")) void run("del", async () => { await api(`/jobs/${id}`, { method: "DELETE" }); go("/"); });
+                  if (confirm("Delete this job with its resume and application records?")) void run("del", async () => { await api(`/jobs/${id}`, { method: "DELETE" }); go("/"); });
                 },
               },
             ]}
@@ -130,10 +130,10 @@ export default function JobDetailPage({ id }: { id: number }) {
       <div className="scroll-clean mb-4 flex gap-1 overflow-x-auto border-b border-line">
         {(
           [
-            ["resume", "简历"],
-            ["jd", j.jd?.fit ? `岗位要求 · 匹配 ${j.jd.fit.score}` : "岗位要求"],
-            ["runs", `投递记录${data.runs.length ? ` (${data.runs.length})` : ""}`],
-            ["prep", data.prepping ? "面试准备 · 生成中" : "面试准备"],
+            ["resume", "Resume"],
+            ["jd", j.jd?.fit ? `Posting · fit ${j.jd.fit.score}` : "Posting"],
+            ["runs", `Applications${data.runs.length ? ` (${data.runs.length})` : ""}`],
+            ["prep", data.prepping ? "Interview prep · writing" : "Interview prep"],
           ] as const
         ).map(([k, label]) => (
           <button
@@ -172,10 +172,10 @@ function Stepper({ detail }: { detail: Detail }) {
   const applied = j.stage === "applied";
   const prog = PROGRESS.find((p) => p.key === (j.progress ?? "applied"))!;
   const steps: Array<{ label: string; state: StepState }> = [
-    { label: "读取岗位", state: j.busy === "parsing" ? "current" : j.jd ? "done" : j.error ? "error" : "todo" },
-    { label: "改简历", state: j.busy === "tailoring" ? "current" : detail.tailored ? "done" : j.error && j.jd ? "error" : "todo" },
+    { label: "Read job", state: j.busy === "parsing" ? "current" : j.jd ? "done" : j.error ? "error" : "todo" },
+    { label: "Tailor resume", state: j.busy === "tailoring" ? "current" : detail.tailored ? "done" : j.error && j.jd ? "error" : "todo" },
     {
-      label: "填写申请",
+      label: "Fill in form",
       state: applied
         ? "done"
         : r?.status === "running" || r?.status === "queued"
@@ -188,8 +188,8 @@ function Stepper({ detail }: { detail: Detail }) {
                 ? "error"
                 : "todo",
     },
-    { label: "确认提交", state: applied ? "done" : r?.status === "awaiting_confirm" ? "wait" : "todo" },
-    { label: applied && prog.key !== "applied" ? prog.label : "已投递", state: applied ? "done" : "todo" },
+    { label: "Confirm submit", state: applied ? "done" : r?.status === "awaiting_confirm" ? "wait" : "todo" },
+    { label: applied && prog.key !== "applied" ? prog.label : "Applied", state: applied ? "done" : "todo" },
   ];
   const dot: Record<StepState, string> = {
     done: "bg-brand-600 text-white",
@@ -208,7 +208,7 @@ function Stepper({ detail }: { detail: Detail }) {
           </span>
           <span className={s.state === "todo" ? "text-muted" : s.state === "wait" ? "font-medium text-amber-800" : s.state === "error" ? "text-red-700" : "text-ink"}>
             {s.label}
-            {s.state === "wait" && "（等你）"}
+            {s.state === "wait" && " (your turn)"}
           </span>
         </li>
       ))}
@@ -231,14 +231,14 @@ function FollowUp({ job: j, events, log, onChange }: { job: Detail["job"]; event
     void run("notes", async () => {
       await api(`/jobs/${j.id}`, { method: "PATCH", body: { notes } });
       await onChange();
-    }, "备注已保存");
+    }, "Notes saved");
   };
   return (
     <Card className="mb-4 space-y-3 p-4">
       {applied && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="text-sm font-medium">进展</span>
-          <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="投递后的进展">
+          <span className="text-sm font-medium">Progress</span>
+          <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Progress after applying">
             {PROGRESS.map((p) => {
               const on = (j.progress ?? "applied") === p.key;
               return (
@@ -256,20 +256,20 @@ function FollowUp({ job: j, events, log, onChange }: { job: Detail["job"]; event
             })}
           </div>
           <span className="text-xs text-muted">
-            {j.appliedAt && `投递于 ${localTime(j.appliedAt)}`}
-            {j.progressAt && j.progress && j.progress !== "applied" && log.length < 2 && ` · 更新于 ${localTime(j.progressAt)}`}
+            {j.appliedAt && `Applied ${localTime(j.appliedAt)}`}
+            {j.progressAt && j.progress && j.progress !== "applied" && log.length < 2 && ` · updated ${localTime(j.progressAt)}`}
           </span>
         </div>
       )}
       {applied && log.length > 1 && (
-        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted" aria-label="进展记录">
+        <ol className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted" aria-label="Progress history">
           {log.map((l, i) => (
             <li key={i} className="flex items-center gap-1.5">
               {i > 0 && <span className="text-stone-300">→</span>}
               <span className={i === log.length - 1 ? "font-medium text-ink" : ""}>
-                {PROGRESS.find((p) => p.key === l.progress)?.label === "等回音" ? "投递" : PROGRESS.find((p) => p.key === l.progress)?.label}
+                {l.progress === "applied" ? "Applied" : PROGRESS.find((p) => p.key === l.progress)?.label}
               </span>
-              <span className="text-stone-400">{localTime(l.ts).split(" ")[0]}</span>
+              <span className="text-stone-400">{localDay(l.ts)}</span>
             </li>
           ))}
         </ol>
@@ -278,7 +278,7 @@ function FollowUp({ job: j, events, log, onChange }: { job: Detail["job"]; event
       <textarea
         className={`${inputCls} min-h-9 text-[13px]`}
         rows={1}
-        placeholder={applied ? "备注：联系人、面试时间、笔试题型、跟进记录…" : "备注：内推人、截止日期、为什么想投…"}
+        placeholder={applied ? "Notes: contacts, interview times, test format, follow-ups…" : "Notes: referrer, deadline, why you want it…"}
         value={notes}
         onFocus={() => setFocused(true)}
         onChange={(e) => setNotes(e.target.value)}
@@ -308,15 +308,16 @@ function FitCard({ fit }: { fit: Fit }) {
       <div className="flex items-center gap-3">
         <ScoreRing score={fit.score} />
         <div className="min-w-0">
-          <div className="text-sm font-medium">匹配度</div>
+          <div className="text-sm font-medium">Fit</div>
           {fit.verdict && <div className="mt-0.5 text-[13px] leading-snug text-muted">{fit.verdict}</div>}
         </div>
       </div>
-      {fit.conflict && <div className="mt-3 rounded bg-amber-50 px-2 py-1.5 text-[13px] text-amber-900">和你想找的冲突：{fit.conflict}（分数最多 45）</div>}
+      {fit.conflict && <div className="mt-3 rounded bg-amber-50 px-2 py-1.5 text-[13px] text-amber-900">Clashes with what you want: {fit.conflict} (score capped at 45)</div>}
       {fit.strengths.length > 0 && (
         <ul className="mt-3 space-y-1 text-[13px]">
           {fit.strengths.map((s, i) => {
-            const bad = s.includes("（资料库里没找到");
+            // The second form is how the Chinese edition marked it, for jobs read before switching.
+            const bad = s.includes("(not in your profile:") || s.includes("（资料库里没找到");
             return (
               <li key={i} className={`flex gap-1.5 ${bad ? "text-amber-900" : ""}`}>
                 {bad ? <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" /> : <Icon name="check" className="mt-0.5 size-3.5 text-brand-600" />}
@@ -338,10 +339,10 @@ function FitCard({ fit }: { fit: Fit }) {
       )}
       {!!fit.unsupported?.length && (
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          评估把资料库里没有的 {fit.unsupported.join("、")} 算成了你的优势，分数可能偏高。真会的话补进资料库，再在「更多」里重新读取岗位。
+          The assessment counted {fit.unsupported.join(", ")} as your strengths, but your profile doesn't mention {fit.unsupported.length === 1 ? "it" : "them"}, so the score may be too high. If you really have {fit.unsupported.length === 1 ? "it" : "them"}, add {fit.unsupported.length === 1 ? "it" : "them"} to your profile and re-read the job from "More".
         </div>
       )}
-      <div className="mt-3 text-xs text-stone-400">资料库改了之后，在「更多 → 重新读取岗位」里重新评估。</div>
+      <div className="mt-3 text-xs text-stone-400">After changing your profile, re-score it with "More → Re-read job".</div>
     </Card>
   );
 }
@@ -361,25 +362,25 @@ function JdTab({ detail, onSaved }: { detail: Detail; onSaved: () => void }) {
             {jd.summary && <p className="text-sm leading-relaxed">{jd.summary}</p>}
             {jd.requirements.length > 0 && (
               <div>
-                <div className="mb-1 text-[13px] font-medium text-muted">必须</div>
+                <div className="mb-1 text-[13px] font-medium text-muted">Must have</div>
                 <ul className="list-disc space-y-0.5 pl-5 text-sm">{jd.requirements.map((r, i) => <li key={i}>{r}</li>)}</ul>
               </div>
             )}
             {jd.niceToHave.length > 0 && (
               <div>
-                <div className="mb-1 text-[13px] font-medium text-muted">加分</div>
+                <div className="mb-1 text-[13px] font-medium text-muted">Nice to have</div>
                 <ul className="list-disc space-y-0.5 pl-5 text-sm">{jd.niceToHave.map((r, i) => <li key={i}>{r}</li>)}</ul>
               </div>
             )}
           </Card>
         ) : (
-          <Empty title="还没读取到岗位内容">{j.busy === "parsing" ? "正在读取…" : "点「更多 → 重新读取岗位」，或在下面直接贴 JD。"}</Empty>
+          <Empty title="No posting content yet">{j.busy === "parsing" ? "Reading…" : "Use \"More → Re-read job\", or paste the JD below."}</Empty>
         )}
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-medium">原文</div>
+            <div className="text-sm font-medium">Original text</div>
             <button className="text-xs text-brand-700 hover:underline" onClick={() => setEditing(!editing)}>
-              {editing ? "收起" : "修改 / 贴 JD"}
+              {editing ? "Close" : "Edit / paste JD"}
             </button>
           </div>
           {editing ? (
@@ -394,14 +395,14 @@ function JdTab({ detail, onSaved }: { detail: Detail; onSaved: () => void }) {
                     await api(`/jobs/${j.id}/parse`, { body: {} });
                     setEditing(false);
                     onSaved();
-                  }, "已保存，重新分析中")
+                  }, "Saved; analysing it again")
                 }
               >
-                保存并重新分析
+                Save and analyse again
               </Button>
             </div>
           ) : (
-            <pre className="max-h-96 overflow-auto font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-muted">{j.jdText || "（空）"}</pre>
+            <pre className="max-h-96 overflow-auto font-sans text-[13px] leading-relaxed whitespace-pre-wrap text-muted">{j.jdText || "(empty)"}</pre>
           )}
         </Card>
       </div>
@@ -410,7 +411,7 @@ function JdTab({ detail, onSaved }: { detail: Detail; onSaved: () => void }) {
         {jd && <FactsCard facts={jd.facts} closed={jd.closed} />}
         {jd && jd.keywords.length > 0 && (
           <Card className="h-fit p-4">
-            <div className="mb-2 text-sm font-medium">关键词</div>
+            <div className="mb-2 text-sm font-medium">Keywords</div>
             <div className="flex flex-wrap gap-1.5">
               {jd.keywords.map((k) => (
                 <span key={k} className={`rounded px-1.5 py-0.5 text-xs ${after.has(k.toLowerCase()) ? "bg-brand-50 text-brand-700" : "bg-stone-100 text-stone-500"}`}>
@@ -418,7 +419,7 @@ function JdTab({ detail, onSaved }: { detail: Detail; onSaved: () => void }) {
                 </span>
               ))}
             </div>
-            {detail.tailored && <div className="mt-3 text-xs text-muted">绿色 = 改好的简历里出现了。灰色的是你的资料里没有的，不会硬塞进去。</div>}
+            {detail.tailored && <div className="mt-3 text-xs text-muted">Green = in the tailored resume. Grey ones are not in your profile, so they are not forced in.</div>}
           </Card>
         )}
       </div>
@@ -431,37 +432,37 @@ function FactsCard({ facts: f, closed }: { facts: JobFacts | null; closed?: bool
   if (!f)
     return (
       <Card className="h-fit p-4">
-        <div className="mb-1 text-sm font-medium">岗位条件</div>
-        <div className="text-xs text-muted">这是旧的读取结果，没有条件信息。点「更多 → 重新读取岗位」就有。</div>
+        <div className="mb-1 text-sm font-medium">Conditions</div>
+        <div className="text-xs text-muted">This job was read before conditions were recorded. Use "More → Re-read job" to get them.</div>
       </Card>
     );
   const rows: Array<[string, string, boolean?]> = [
-    ["类型", typeLabel(f) || "没写"],
-    ["经验", f.minYears === null ? "没写" : yearsLabel(f.minYears), (f.minYears ?? 0) >= 2],
-    ["学历", f.degree ? DEGREE_LABEL[f.degree] : "没写"],
-    ["在读 / 毕业", f.student === "graduated" ? "须已毕业" : f.student === "enrolled" ? "须在读" : "没写", f.student === "graduated"],
-    ["谁能申请", f.workAuth ? AUTH_LABEL[f.workAuth] : "没写", !!f.workAuth],
-    ["开始时间", f.start || "没写"],
-    ["办公", f.workplace ? { onsite: "到岗", hybrid: "混合", remote: "远程" }[f.workplace] : "没写"],
-    ["薪资", f.salary || "没写"],
-    ["要交的材料", f.materials.length ? f.materials.map((m) => MATERIAL_LABEL[m]).join("、") : "没写"],
+    ["Type", typeLabel(f) || "Not stated"],
+    ["Experience", f.minYears === null ? "Not stated" : yearsLabel(f.minYears), (f.minYears ?? 0) >= 2],
+    ["Education", f.degree ? DEGREE_LABEL[f.degree] : "Not stated"],
+    ["Student / graduate", f.student === "graduated" ? "Graduates only" : f.student === "enrolled" ? "Current students only" : "Not stated", f.student === "graduated"],
+    ["Who can apply", f.workAuth ? AUTH_LABEL[f.workAuth] : "Not stated", !!f.workAuth],
+    ["Start date", f.start || "Not stated"],
+    ["Workplace", f.workplace ? { onsite: "On-site", hybrid: "Hybrid", remote: "Remote" }[f.workplace] : "Not stated"],
+    ["Salary", f.salary || "Not stated"],
+    ["Documents to send", f.materials.length ? f.materials.map((m) => MATERIAL_LABEL[m]).join(", ") : "Not stated"],
   ];
   return (
     <Card className="h-fit p-4">
       <div className="mb-2 flex items-center justify-between text-sm font-medium">
-        岗位条件
-        {closed && <Badge tone="red">已关闭</Badge>}
+        Conditions
+        {closed && <Badge tone="red">Closed</Badge>}
       </div>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[13px]">
         {rows.map(([k, v, warn]) => (
           <div key={k} className="contents">
             <dt className="text-muted">{k}</dt>
-            <dd className={v === "没写" ? "text-stone-400" : warn ? "text-amber-800" : ""}>{v}</dd>
+            <dd className={v === "Not stated" ? "text-stone-400" : warn ? "text-amber-800" : ""}>{v}</dd>
           </div>
         ))}
       </dl>
-      {f.coverLetterAsk && <div className="mt-2 rounded bg-paper px-2 py-1.5 text-xs text-muted">求职信要写：{f.coverLetterAsk}</div>}
-      <div className="mt-2 text-[11px] text-stone-400">只取岗位原文写明的，没写的不猜。</div>
+      {f.coverLetterAsk && <div className="mt-2 rounded bg-paper px-2 py-1.5 text-xs text-muted">Cover letter should cover: {f.coverLetterAsk}</div>}
+      <div className="mt-2 text-[11px] text-stone-400">Only what the posting itself states; nothing is guessed.</div>
     </Card>
   );
 }
@@ -484,7 +485,7 @@ function ResumeTab({ detail }: { detail: Detail }) {
   }, [t?.generatedAt, t?.scale, j.coverLetter]);
 
   if (!t || !doc) {
-    return <Empty title={j.busy === "tailoring" ? "正在按岗位改简历…" : "还没改简历"}>{j.jd ? "点右上角「改简历」。" : "先读取岗位。"}</Empty>;
+    return <Empty title={j.busy === "tailoring" ? "Tailoring the resume to this job…" : "Resume not tailored yet"}>{j.jd ? "Click \"Tailor resume\" at the top right." : "Read the job first."}</Empty>;
   }
   const edit = (fn: (d: ResumeDoc) => void) => {
     const d = structuredClone(doc);
@@ -500,18 +501,18 @@ function ResumeTab({ detail }: { detail: Detail }) {
       <div className="space-y-4">
         {t.warnings.length > 0 && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <div className="mb-1 font-medium">要你核对的地方</div>
+            <div className="mb-1 font-medium">Please check</div>
             <ul className="list-disc space-y-0.5 pl-5">{t.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>
           </div>
         )}
         <Card className="p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm font-medium">改了什么</div>
+            <div className="text-sm font-medium">What changed</div>
             <div className="flex flex-wrap gap-x-3 text-xs text-muted">
-              {rewritten > 0 && <span>改写了 {rewritten} 条要点</span>}
+              {rewritten > 0 && <span>{rewritten} {rewritten === 1 ? "bullet" : "bullets"} reworded</span>}
               {cov.keywords.length > 0 && (
                 <span>
-                  关键词覆盖：原版 {cov.before.length} → 现在 <b className="text-ink">{cov.after.length}</b> / {cov.keywords.length}
+                  Keywords covered: original {cov.before.length} → now <b className="text-ink">{cov.after.length}</b> / {cov.keywords.length}
                 </span>
               )}
             </div>
@@ -544,7 +545,8 @@ function ResumeTab({ detail }: { detail: Detail }) {
                     <div className="space-y-1.5">
                       {e.bullets.map((b, bi) => {
                         const orig = t.origin[b.id];
-                        const plainOrig = orig?.replace(/^（素材库）/, "");
+                        // "（素材库）" is how the Chinese edition marked an extra fact, for resumes tailored before switching.
+                        const plainOrig = orig?.replace(/^(\(Extra facts\) |（素材库）)/, "");
                         return (
                           <div key={b.id} className="group flex gap-2">
                             <span className={`mt-2 size-1 shrink-0 rounded-full ${orig ? "bg-brand-500" : "bg-stone-400"}`} />
@@ -556,23 +558,23 @@ function ResumeTab({ detail }: { detail: Detail }) {
                               />
                               {orig && (
                                 <div className="flex items-start gap-2 px-1.5 text-xs leading-snug text-stone-400">
-                                  <span className="min-w-0 flex-1">原文：{orig}</span>
+                                  <span className="min-w-0 flex-1">Original: {orig}</span>
                                   {plainOrig && plainOrig !== b.text && (
                                     <button
                                       className="inline-flex shrink-0 items-center gap-0.5 text-stone-400 hover:text-brand-700"
-                                      title="把这条换回原文"
+                                      title="Switch this back to the original"
                                       onClick={() => edit((d) => (d.sections[si].entries[ei].bullets[bi].text = plainOrig))}
                                     >
                                       <Icon name="undo" className="size-3" />
-                                      用原文
+                                      Use original
                                     </button>
                                   )}
                                 </div>
                               )}
                             </div>
                             <button
-                              title="去掉这条"
-                              aria-label="去掉这条"
+                              title="Remove this bullet"
+                              aria-label="Remove this bullet"
                               className="mt-1 h-6 shrink-0 px-1 text-stone-300 opacity-0 group-hover:opacity-100 hover:text-red-600 focus:opacity-100"
                               onClick={() => edit((d) => d.sections[si].entries[ei].bullets.splice(bi, 1))}
                             >
@@ -606,7 +608,7 @@ function ResumeTab({ detail }: { detail: Detail }) {
 
         <Card className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <div className="text-sm font-medium">求职信</div>
+            <div className="text-sm font-medium">Cover letter</div>
             <div className="flex gap-3">
               {!cover.trim() && !dirty && (
                 <button
@@ -617,30 +619,30 @@ function ResumeTab({ detail }: { detail: Detail }) {
                       const r = await api<{ text: string }>(`/jobs/${j.id}/cover-letter`, { body: {} });
                       setCover(r.text);
                       setPreviewKey((k) => k + 1);
-                    }, "求职信写好了")
+                    }, "Cover letter written")
                   }
                 >
-                  {busy === "cover" ? "正在写…" : "写一封"}
+                  {busy === "cover" ? "Writing…" : "Write one"}
                 </button>
               )}
               {cover.trim() && (
                 <button
                   className="text-xs text-brand-700 hover:underline"
-                  onClick={() => navigator.clipboard.writeText(cover).then(() => toast("已复制"), () => toast("复制失败", "err"))}
+                  onClick={() => navigator.clipboard.writeText(cover).then(() => toast("Copied"), () => toast("Could not copy", "err"))}
                 >
-                  复制
+                  Copy
                 </button>
               )}
               {j.hasCover && (
                 <a className="text-xs text-brand-700 hover:underline" href={`/api/jobs/${j.id}/cover.pdf`} target="_blank" rel="noreferrer">
-                  看 PDF
+                  View PDF
                 </a>
               )}
             </div>
           </div>
           <textarea
             className={`${inputCls} min-h-24 text-[13px] leading-relaxed`}
-            placeholder={j.jd?.facts?.materials.includes("cover_letter") ? "这个岗位要求求职信，点右上角「写一封」" : "没有求职信。岗位要求、或申请表要的时候会自动写一封"}
+            placeholder={j.jd?.facts?.materials.includes("cover_letter") ? "This job asks for a cover letter: click \"Write one\" at the top right" : "No cover letter. One is written automatically when the posting or the application form asks for it"}
             value={cover}
             onChange={(e) => {
               setCover(e.target.value);
@@ -659,10 +661,10 @@ function ResumeTab({ detail }: { detail: Detail }) {
                 await api(`/jobs/${j.id}/tailored`, { method: "PUT", body: { doc, coverLetter: cover } });
                 setDirty(false);
                 setPreviewKey((k) => k + 1);
-              }, "已保存，PDF 已更新")
+              }, "Saved; PDF updated")
             }
           >
-            保存并更新 PDF
+            Save and update PDF
           </Button>
           {dirty && (
             <Button
@@ -673,22 +675,22 @@ function ResumeTab({ detail }: { detail: Detail }) {
                 setDirty(false);
               }}
             >
-              撤销修改
+              Undo changes
             </Button>
           )}
-          {dirty && <span className="text-xs text-amber-700">有没保存的修改，预览还是旧的</span>}
+          {dirty && <span className="text-xs text-amber-700">Unsaved changes: the preview is still the old one</span>}
           <a className="ml-auto inline-flex items-center gap-1 text-sm text-brand-700 hover:underline" href={`/api/jobs/${j.id}/resume.pdf?download=1`}>
             <Icon name="download" />
-            下载 PDF
+            Download PDF
           </a>
         </div>
       </div>
 
       <div className="xl:sticky xl:top-6 xl:h-[calc(100vh-3rem)]">
         <div className="mb-2 flex items-center justify-between text-xs text-muted">
-          <span>预览（上传的就是这份）{t.scale && t.scale < 1 ? ` · 为放进一页字号缩到 ${Math.round(t.scale * 100)}%` : ""}</span>
+          <span>Preview (this is what gets uploaded){t.scale && t.scale < 1 ? ` · text scaled to ${Math.round(t.scale * 100)}% to fit one page` : ""}</span>
           <a className="text-brand-700 hover:underline" href={`/api/jobs/${j.id}/resume.pdf`} target="_blank" rel="noreferrer">
-            打开 PDF
+            Open PDF
           </a>
         </div>
         <ResumePreview key={previewKey} src={`/api/jobs/${j.id}/resume.html`} />
@@ -718,7 +720,7 @@ function ResumePreview({ src }: { src: string }) {
     <div ref={box} className="relative aspect-[210/297] w-full overflow-hidden rounded-lg border border-line bg-white shadow-sm">
       {scale > 0 && (
         <iframe
-          title="简历预览"
+          title="Resume preview"
           src={src}
           className="absolute left-0 top-0 origin-top-left border-0"
           style={{ width: PAGE_W, height: PAGE_H, transform: `scale(${scale})` }}
@@ -729,23 +731,23 @@ function ResumePreview({ src }: { src: string }) {
 }
 
 const RUN_TEXT: Record<string, string> = {
-  submitted: "已提交",
-  finished: "已结束",
-  failed: "失败",
-  cancelled: "已放弃",
-  interrupted: "中断",
+  submitted: "Submitted",
+  finished: "Finished",
+  failed: "Failed",
+  cancelled: "Abandoned",
+  interrupted: "Interrupted",
 };
 
 function RunsTab({ detail }: { detail: Detail }) {
   const [latest, ...older] = detail.runs;
-  if (!latest) return <Empty title="还没投递过">简历改好后点「开始投递」，助手会在浏览器里打开申请页去填。</Empty>;
+  if (!latest) return <Empty title="No applications yet">Once the resume is tailored, click "Start applying" and the agent opens the application page in your browser and fills it in.</Empty>;
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
       <div className="space-y-4">
         <RunCard run={latest} showJob={false} showLastScreen />
         {older.length > 0 && (
           <Card className="divide-y divide-line">
-            <div className="px-4 py-2 text-xs font-medium text-muted">之前的投递</div>
+            <div className="px-4 py-2 text-xs font-medium text-muted">Earlier applications</div>
             {older.map((r) => (
               <div key={r.id} className="flex items-center gap-3 px-4 py-2 text-sm">
                 <span className="w-28 shrink-0 text-muted">{localTime(r.created_at)}</span>
@@ -758,8 +760,8 @@ function RunsTab({ detail }: { detail: Detail }) {
       </div>
       <Card className="h-fit p-4">
         <div className="mb-2 flex items-center justify-between text-sm font-medium">
-          这次的每一步
-          <span className="text-xs font-normal text-muted">{localTime(latest.created_at)} 开始</span>
+          Every step of this run
+          <span className="text-xs font-normal text-muted">started {localTime(latest.created_at)}</span>
         </div>
         <ol className="max-h-[70vh] space-y-1.5 overflow-auto text-[13px]">
           {detail.steps.map((s) => (
@@ -774,11 +776,11 @@ function RunsTab({ detail }: { detail: Detail }) {
           ))}
         </ol>
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-line pt-2 text-[11px] text-muted">
-          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-stone-300" />操作</span>
-          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-amber-500" />等你</span>
-          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-violet-500" />拦下的提交</span>
-          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-sky-400" />模型说明</span>
-          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-red-500" />出错</span>
+          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-stone-300" />Action</span>
+          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-amber-500" />Needs you</span>
+          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-violet-500" />Blocked submit</span>
+          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-sky-400" />Model note</span>
+          <span className="flex items-center gap-1"><span className="size-1.5 rounded-full bg-red-500" />Error</span>
         </div>
       </Card>
     </div>
