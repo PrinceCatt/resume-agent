@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, go, localTime, PROGRESS, rmb, tokens, useApi, type CalEvent, type Draft, type DraftKind, type Fit, type JobFacts, type JobView, type Prep, type Progress, type ResumeDoc, type RunView, type Step, type Tailored } from "../api.ts";
 import { RunCard } from "../components/RunCard.tsx";
 import { Schedule } from "../components/Schedule.tsx";
@@ -691,10 +691,39 @@ function ResumeTab({ detail }: { detail: Detail }) {
             打开 PDF
           </a>
         </div>
-        <div className="overflow-hidden rounded-lg border border-line bg-white shadow-sm">
-          <iframe key={previewKey} title="简历预览" src={`/api/jobs/${j.id}/resume.html`} className="aspect-[210/297] w-full" />
-        </div>
+        <ResumePreview key={previewKey} src={`/api/jobs/${j.id}/resume.html`} />
       </div>
+    </div>
+  );
+}
+
+// A4 at 96 dpi. The resume page is 180 mm wide, wider than the preview column on a laptop screen,
+// so the page is laid out at full size and scaled to the column instead of being cut off on the right.
+const PAGE_W = 794;
+const PAGE_H = 1123;
+
+function ResumePreview({ src }: { src: string }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const fit = () => setScale(el.clientWidth / PAGE_W);
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={box} className="relative aspect-[210/297] w-full overflow-hidden rounded-lg border border-line bg-white shadow-sm">
+      {scale > 0 && (
+        <iframe
+          title="简历预览"
+          src={src}
+          className="absolute left-0 top-0 origin-top-left border-0"
+          style={{ width: PAGE_W, height: PAGE_H, transform: `scale(${scale})` }}
+        />
+      )}
     </div>
   );
 }

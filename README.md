@@ -8,6 +8,36 @@
 
 > Job sites' terms often forbid automation tools, and heavy use can get an account restricted. You are responsible for how you use this; keep the volume low and review every application before confirming.
 
+## 截图 / Screenshots
+
+截图里的人、公司、岗位都是虚构的，匹配度说明等文字是为演示写的示例，不是模型的输出；「待处理」里那份申请表是程序在演示模式下真的在本地测试页上填的。
+
+Everything here is sample data: the person, companies and jobs are made up, and the fit notes were written for the demo rather than produced by the model. The application in 待处理 was really filled by the app, in demo mode, on its local test page.
+
+**岗位列表 / Job list**：每个岗位读完后有匹配分和岗位写明的条件（全职 / 兼职实习、经验、开始时间），上面是接下来的面试、笔试和截止日期。Each posting gets a fit score and the conditions it states; upcoming interviews, tests and deadlines are on top.
+
+![岗位列表 / Job list](docs/screenshots/jobs.png)
+
+**待处理 / Waiting for you**：agent 填完申请表，停在提交按钮前，列出填了什么、附上页面截图，等你点「确认提交」。The agent fills the form, stops before the submit button and shows what it entered, with a screenshot of the page.
+
+![待处理 / Waiting for you](docs/screenshots/review.png)
+
+**匹配度 / Fit**：对照资料库打分，列出对得上的和缺的，以及岗位条件。Scored against your profile, with what matches, what is missing and the posting's conditions.
+
+![匹配度 / Fit](docs/screenshots/job-detail.png)
+
+**按岗位改简历 / Tailored resume**：只用资料库里的内容挑选、排序、换说法，右边是会上传的 PDF。Built only from your profile; the right side is the PDF that gets uploaded.
+
+![按岗位改简历 / Tailored resume](docs/screenshots/resume.png)
+
+**统计 / Stats**：投递漏斗、每周投递、按匹配度和网站分组的回复率。Funnel, applications per week, and reply rates by fit score and by site.
+
+![统计 / Stats](docs/screenshots/stats.png)
+
+**花费 / Cost**：按 DeepSeek 价目和每次调用所在的时段估算。Estimated from DeepSeek's prices and the time of each call.
+
+![花费 / Cost](docs/screenshots/cost.png)
+
 ## 启动
 
 需要 Node 24 和 pnpm。第一次先装依赖：

@@ -1,5 +1,10 @@
 # 更新记录 / Changelog
 
+## 未发布 / Unreleased
+
+- README 加了截图（虚构的演示数据）。/ Screenshots in the README, made with made-up sample data.
+- 岗位详情的简历预览在笔记本屏幕上不再被切掉右边：整页按栏宽缩放。/ The resume preview on the job page is scaled to its column instead of being cut off on laptop screens.
+
 ## 0.2.0 — 2026-11-25（第一个公开版本 / first public release）
 
 **省钱 / Spending less on the model**
