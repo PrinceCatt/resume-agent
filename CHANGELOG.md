@@ -4,6 +4,7 @@
 
 - README 加了截图（虚构的演示数据）。/ Screenshots in the README, made with made-up sample data.
 - 岗位详情的简历预览在笔记本屏幕上不再被切掉右边：整页按栏宽缩放。/ The resume preview on the job page is scaled to its column instead of being cut off on laptop screens.
+- 英文版：界面、服务器消息、导出表格、日历文件和 README 都改成英文，模型也用英文写说明和提问；中文版留下的旧记录照样能读。/ English edition: the UI, server messages, the spreadsheet export, calendar files and the README are in English, and the model writes its notes and questions in English; records left by the Chinese edition still read correctly.
 
 ## 0.2.0 — 2026-11-25（第一个公开版本 / first public release）
 
