@@ -48,7 +48,7 @@ pnpm install
 
 - Windows：双击 `start.cmd`，浏览器会打开 http://127.0.0.1:8791 。
 - macOS / Linux：`pnpm serve`（构建界面并启动），然后打开 http://127.0.0.1:8791 。
-- 开发：`pnpm dev`（界面 http://127.0.0.1:5191 ，接口 :8791）。检查：`pnpm typecheck`、`pnpm test`。
+- 开发：`pnpm dev`（界面 http://127.0.0.1:5191 ，接口 :8791）。检查：`pnpm typecheck`、`pnpm test`。Python 版后端见下面的「Python 后端」。
 
 只监听本机（127.0.0.1），并且只接受本机页面发来的写请求。
 
@@ -133,6 +133,27 @@ pnpm install
 - `server/core.test.ts` — 提交拦截、出处校验、重复链接、投递跟进、日程推进进展、统计、问过的问题、找岗位的解析和去重、岗位条件的校验和筛选统计、求职信什么时候写、高峰时段和等闲时、填表只发变化、重读不重复花钱的测试（`pnpm test`）
 - `fixtures/test-job.html` — 本地测试用的招聘页
 - `fixtures/site-*.html` — 仿照 LinkedIn / JobStreet / Glassdoor→Indeed 流程的本地模拟页（不是真网站，没有它们的标志）
+
+## Python 后端 / Python backend
+
+`py/` 是 `server/` 的 Python 移植：同样的接口、JSON、事件流（`/api/events`）、SQLite 表结构和 `DATA_DIR` / `PORT`（默认仓库的 `data/`、8791），能直接打开 TS 版建的 `data/app.db`。界面（`src/`）不用改。TS 版照旧在，`start.cmd`、`pnpm serve` 启动的还是 TS 版。
+
+A Python port of `server/`: same routes, JSON shapes, SSE events, SQLite schema and env vars, so the same UI runs on it and it opens a `data/app.db` the TS server created.
+
+需要 [uv](https://docs.astral.sh/uv/)（会自己装 Python 3.13）。用电脑上已有的 Edge / Chrome，不下载浏览器：
+
+```bash
+cd py && uv sync          # 第一次：建 py/.venv
+pnpm dev:py               # 界面 :5191 + Python 接口 :8791（同样认 WEB_PORT、API_PORT）
+cd py && uv run python -m resume_agent   # 只起接口；先 pnpm build 的话也会提供界面
+cd py && uv run pytest    # core.test.ts 的 33 个测试 + 扩展中转的 2 个
+```
+
+- 用到 aiohttp（接口和事件流）、Playwright for Python（填表、读岗位、出 PDF）、pypdf（从 PDF 导入简历）。
+- 每个模块对应 `server/` 里的同名文件；提示词原样照搬。
+- `py/resume_agent/relay.py`：Python 版 Playwright 没有 Node 版的「extension 模式」，这里照 playwright-core 1.65 的实现移植了中转（找装了扩展的配置、打开连接页、把 CDP 转成扩展的 chrome.debugger 调用）。测试里用一个假扩展驱动一个临时的无头 Edge 验证过，还没在真扩展上跑过。
+- 开发开关 `RESUME_AGENT_HEADLESS_BROWSER=1`：助手本来要在你浏览器里开的标签页改开在一个全新的无头浏览器里，不碰你的浏览器，只用于对着 `fixtures/` 测试。
+- 和 TS 版的差别：PDF 导入用 pypdf 取文字（分行可能和 pdf.js 不同）；链接去重用 Python 的 URL 解析（不做国际化域名和百分号编码的规范化）。
 
 ## 许可 / License
 

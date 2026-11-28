@@ -2,6 +2,7 @@
 
 ## 未发布 / Unreleased
 
+- 新增 Python 版后端（`py/`，`pnpm dev:py`）：接口、事件、数据库和 TS 版一样，同一个界面直接用；TS 版不变。/ A Python port of the backend in `py/` (`pnpm dev:py`) with the same API, events and database; the TS server is unchanged.
 - README 加了截图（虚构的演示数据）。/ Screenshots in the README, made with made-up sample data.
 - 岗位详情的简历预览在笔记本屏幕上不再被切掉右边：整页按栏宽缩放。/ The resume preview on the job page is scaled to its column instead of being cut off on laptop screens.
 
