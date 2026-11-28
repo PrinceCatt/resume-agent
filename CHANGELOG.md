@@ -4,6 +4,7 @@
 
 - README 加了截图（虚构的演示数据）。/ Screenshots in the README, made with made-up sample data.
 - 岗位详情的简历预览在笔记本屏幕上不再被切掉右边：整页按栏宽缩放。/ The resume preview on the job page is scaled to its column instead of being cut off on laptop screens.
+- 实验中的 Go 后端（`go/`，`pnpm dev:go`）：接口、数据库和界面都与 TypeScript 版相同，暂时不能连接你自己的 Edge 填表。/ Experimental Go backend (`go/`, `pnpm dev:go`) with the same API, database and UI; it cannot fill forms in your own Edge yet.
 
 ## 0.2.0 — 2026-11-25（第一个公开版本 / first public release）
 

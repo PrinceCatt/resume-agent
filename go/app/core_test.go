@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -892,4 +893,33 @@ func TestCSVCells(t *testing.T) {
 	eq(t, csvCell(`a,b`), `"a,b"`)
 	eq(t, csvCell(`say "hi"`), `"say ""hi"""`)
 	eq(t, csvCell("two\nlines"), "\"two\nlines\"")
+}
+
+// Renders the master resume to a PDF in the headless browser and reads it back through the PDF import
+// path (pdf.js served by this server). Starts Edge/Chrome, so it only runs with RA_BROWSER_TESTS=1.
+func TestPdfRoundTrip(t *testing.T) {
+	if os.Getenv("RA_BROWSER_TESTS") != "1" {
+		t.Skip("set RA_BROWSER_TESTS=1 to run tests that start a headless browser")
+	}
+	Root, _ = filepath.Abs(filepath.Join("..", ".."))
+	srv := httptest.NewServer(Handler())
+	defer srv.Close()
+	ServerURL = srv.URL
+	defer closeAll()
+	out := filepath.Join(DataDir, "files", "roundtrip.pdf")
+	if _, err := writePdf(out, func(scale float64) string { return resumeHtml(masterDoc(master), scale) }, true); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ok(t, strings.HasPrefix(string(b), "%PDF-"), "a PDF was written")
+	text, err := pdfText(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"TEST PERSON", "Example University", "Built a full-stack blog website with Spring Boot and Vue"} {
+		ok(t, strings.Contains(text, want), want+" in: "+text)
+	}
 }

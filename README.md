@@ -134,6 +134,23 @@ pnpm install
 - `fixtures/test-job.html` — 本地测试用的招聘页
 - `fixtures/site-*.html` — 仿照 LinkedIn / JobStreet / Glassdoor→Indeed 流程的本地模拟页（不是真网站，没有它们的标志）
 
+## Go 后端 / Go backend
+
+`go/` 是 `server/` 的 Go 版（实验中）：同样的接口、JSON、事件流（`/api/events`）和 `data/app.db` 结构，界面不用改，两个版本可以轮流打开同一个 `data/`（不要同时开）。/ `go/` is a Go port of `server/` (experimental): same routes, JSON shapes, event stream and `data/app.db` schema, so the unchanged UI works against it and either backend can open the same `data/` (not both at once).
+
+需要 Go 1.27+，以及 Edge 或 Chrome（无头模式出 PDF、读公开岗位页）。不需要 Playwright。/ Needs Go 1.27+ and Edge or Chrome (run headless for PDFs and public job pages); no Playwright.
+
+```bash
+pnpm dev:go                      # Go 接口 :8791（改了 .go 文件会重新编译）+ 界面 :5191
+cd go && go build -o resume-agent . && ./resume-agent   # 只跑接口；先 pnpm build 就同时提供界面
+cd go && go test ./... && go vet ./...
+```
+
+- 环境变量 / Environment: `PORT`（默认 8791）、`DATA_DIR`（默认仓库里的 `data/`）、`GO`（`go` 不在 PATH 上时给 `pnpm dev:go` 指路径）、`RA_BROWSER_PATH`（浏览器不在默认位置时）。
+- 已移植 / Ported: 设置、资料库、岗位增删改、读岗位和匹配、导出表格、事件流、用量和统计；改简历、出处校验、求职信、PDF；填表 agent（页面快照、只发变化、提交拦截、问你 / 人工处理 / 确认前核对、截图）；找岗位（LinkedIn 公开搜索、MyCareersFuture）、日程和 .ics、面试准备、邮件草稿、等闲时、余额；演示模式；从 PDF 导入（pdf.js 在无头浏览器里跑，需要 `pnpm install` 过）。提示词和 TypeScript 版一字不差。/ Settings, profile, jobs, reading and scoring, CSV, events, usage and stats; tailoring, source check, cover letters, PDFs; the form-filling agent (snapshots, deltas, the final-submit gate, ask / manual / review before confirm, screenshots); job search, schedule and .ics, interview prep, email drafts, off-peak batching, balance; demo mode; PDF import. Prompts are copied verbatim.
+- 没移植 / Not ported: 连接你自己的 Edge 的 Playwright 扩展中继。所以 Go 版现在不能在你的浏览器里填表；要自动填表请用 `pnpm dev`。开发时可以设 `RA_AGENT_HEADLESS=1`，让 agent 在无头浏览器里填本地的 `fixtures/` 测试页（只用于测试）。/ The Playwright-extension relay to your own Edge, so the Go backend cannot fill forms in your browser yet; use `pnpm dev` for that. For development, `RA_AGENT_HEADLESS=1` lets the agent fill the local `fixtures/` pages in a headless browser.
+- 页面快照脚本 `go/app/observe.js` 由 `server/observe.ts` 生成（`cd go/app && go generate`），两边读页面的逻辑是同一份。/ The page-snapshot script is generated from `server/observe.ts`, so both backends read pages with the same code.
+
 ## 许可 / License
 
 [MIT](LICENSE)。更新记录见 [CHANGELOG.md](CHANGELOG.md)。
