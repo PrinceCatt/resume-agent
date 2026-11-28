@@ -227,9 +227,6 @@ func getHeadless() (*Browser, error) {
 	)
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(allocCtx)
-	startCtx, stop := context.WithTimeout(ctx, 60*time.Second)
-	defer stop()
-	_ = startCtx
 	if err := chromedp.Do(ctx); err != nil {
 		cancel()
 		allocCancel()
@@ -327,9 +324,6 @@ func (b *Browser) NewPage(o pageOpts) (*Page, error) {
 }
 
 func (p *Page) attach(ctx context.Context, cancel context.CancelFunc) error {
-	start, stop := context.WithTimeout(ctx, 30*time.Second)
-	defer stop()
-	_ = start
 	if err := chromedp.Do(ctx); err != nil {
 		cancel()
 		return err
