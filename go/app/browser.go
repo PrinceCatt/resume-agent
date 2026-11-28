@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -211,6 +212,7 @@ func getHeadless() (*Browser, error) {
 		}
 		return nil, errors.New("这台电脑上找不到 " + which + "。")
 	}
+	sweepProfiles()
 	dir := filepath.Join(DataDir, "browser", fmt.Sprintf("headless-%d-%d", os.Getpid(), time.Now().UnixMilli()))
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
@@ -226,7 +228,7 @@ func getHeadless() (*Browser, error) {
 		chromedp.Flag("mute-audio", true),
 	)
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	ctx, cancel := chromedp.NewContext(allocCtx)
+	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithErrorf(chromedpErrorf))
 	if err := chromedp.Do(ctx); err != nil {
 		cancel()
 		allocCancel()
@@ -1232,4 +1234,32 @@ func (l *Locator) UploadThroughChooser(name, mime string, data []byte, timeout t
 		return err
 	}
 	return l.callOn(res.Object.ObjectID, setFilesJS, []any{name, mime, base64.StdEncoding.EncodeToString(data)}, nil)
+}
+
+// sweepProfiles removes throwaway profiles left by a server that was killed before it could clean up
+// (the browser itself exits when its pipe to the killed server closes). Ours carry this process id.
+var sweepOnce sync.Once
+
+func sweepProfiles() {
+	sweepOnce.Do(func() {
+		root := filepath.Join(DataDir, "browser")
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			return
+		}
+		mine := fmt.Sprintf("headless-%d-", os.Getpid())
+		for _, e := range entries {
+			if e.IsDir() && strings.HasPrefix(e.Name(), "headless-") && !strings.HasPrefix(e.Name(), mine) {
+				_ = os.RemoveAll(filepath.Join(root, e.Name()))
+			}
+		}
+	})
+}
+
+// chromedpErrorf drops chromedp's complaint about DOM events during Page.setDocumentContent (the PDF
+// renderer replaces a blank page's document), which is harmless; anything else is logged.
+func chromedpErrorf(format string, args ...any) {
+	if msg := fmt.Sprintf(format, args...); !strings.Contains(msg, "no top-level frame") {
+		log.Print("chromedp: " + msg)
+	}
 }
