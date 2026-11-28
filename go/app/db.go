@@ -298,3 +298,11 @@ func parseSQLTime(s string) (time.Time, bool) {
 	}
 	return time.Time{}, false
 }
+
+// closeDB closes the database (tests remove their data folder afterwards).
+func closeDB() {
+	if db != nil {
+		_ = db.Close()
+		db = nil
+	}
+}
