@@ -10,3 +10,9 @@ data/
 tmp/
 *.log
 .DS_Store
+
+# Go backend build output
+/go/resume-agent
+/go/resume-agent.exe
+/go/*.test
+/go/*.exe
