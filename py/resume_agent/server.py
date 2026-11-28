@@ -987,12 +987,13 @@ def make_app() -> web.Application:
 
 
 def main() -> None:
+    # Logs go to a pipe (scripts/dev-py.mjs) or a file: UTF-8 whatever the console code page is.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     logging.getLogger("aiohttp.access").setLevel(logging.WARNING)
     port = int(js_number(os.environ.get("PORT", "8791")))
-    if sys.platform == "win32":
-        # Playwright needs subprocess support: the Proactor loop (the default since 3.8) has it.
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
     suffix = " (serving the built UI)" if DIST.exists() else ""
     web.run_app(
         make_app(),
