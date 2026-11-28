@@ -372,15 +372,15 @@ func guess(label string, p Profile, job *Job, mem *MockMemory) string {
 }
 
 var (
-	reDecline   = jsRe(`decline|prefer not|don.?t wish|not to (say|disclose)|不愿|不透露`, "i")
-	reEEO       = jsRe(`gender|race|ethnic|veteran|disabilit|性别|种族|民族`, "i")
-	reFinal     = jsRe(`\bsubmit\b|send application|提交|投递|发送`, "i")
-	reNext      = jsRe(`\bnext\b|continue|review|下一步|继续`, "i")
-	reThanks    = jsRe(`thank you for (applying|your application)|application (has been )?(received|submitted)|申请已提交|投递成功`, "i")
-	reApplyBtn  = jsRe(`apply|申请`, "i")
-	reResumeIn  = jsRe(`resume|cv|简历`, "i")
-	reConsent   = jsRe(`agree|consent|acknowledge|confirm|privacy|同意|确认`, "i")
-	reCountry   = jsRe(`country|国家`, "i")
+	reDecline  = jsRe(`decline|prefer not|don.?t wish|not to (say|disclose)|不愿|不透露`, "i")
+	reEEO      = jsRe(`gender|race|ethnic|veteran|disabilit|性别|种族|民族`, "i")
+	reFinal    = jsRe(`\bsubmit\b|send application|提交|投递|发送`, "i")
+	reNext     = jsRe(`\bnext\b|continue|review|下一步|继续`, "i")
+	reThanks   = jsRe(`thank you for (applying|your application)|application (has been )?(received|submitted)|申请已提交|投递成功`, "i")
+	reApplyBtn = jsRe(`apply|申请`, "i")
+	reResumeIn = jsRe(`resume|cv|简历`, "i")
+	reConsent  = jsRe(`agree|consent|acknowledge|confirm|privacy|同意|确认`, "i")
+	reCountry  = jsRe(`country|国家`, "i")
 )
 
 // jsonObj builds a JSON object with keys in the given order (JSON.stringify of an object literal).
@@ -637,9 +637,9 @@ type StoredPoint struct {
 }
 
 type StoredQuestion struct {
-	Q      string      `json:"q"`
-	Kind   string      `json:"kind"`
-	Why    string      `json:"why"`
+	Q      string        `json:"q"`
+	Kind   string        `json:"kind"`
+	Why    string        `json:"why"`
 	Points []StoredPoint `json:"points"`
 }
 
@@ -649,11 +649,11 @@ type PrepGap struct {
 }
 
 type mockPrepOut struct {
-	Pitch     string         `json:"pitch"`
+	Pitch     string           `json:"pitch"`
 	Questions []StoredQuestion `json:"questions"`
-	ToAsk     []string       `json:"toAsk"`
-	Gaps      []PrepGap      `json:"gaps"`
-	Demo      string         `json:"_demo"`
+	ToAsk     []string         `json:"toAsk"`
+	Gaps      []PrepGap        `json:"gaps"`
+	Demo      string           `json:"_demo"`
 }
 
 var (

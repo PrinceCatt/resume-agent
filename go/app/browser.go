@@ -289,20 +289,20 @@ type Page struct {
 	t      *chromedp.Target
 	id     target.ID
 
-	mu          sync.Mutex
-	worlds      map[string]runtime.ExecutionContextID // frame id -> default world
-	uniques     map[string]string                     // context unique id -> frame id
-	mainFrame   string
-	url         string
-	closed      bool
-	closedCh    chan struct{}
-	onPopup     []func(*Page)
-	onClose     []func()
-	choosers    chan int64 // backend node ids of file choosers
-	mouseX      float64
-	mouseY      float64
-	prefixes    map[string]string // frame id -> data-ra-id prefix
-	popupsSeen  map[target.ID]bool
+	mu         sync.Mutex
+	worlds     map[string]runtime.ExecutionContextID // frame id -> default world
+	uniques    map[string]string                     // context unique id -> frame id
+	mainFrame  string
+	url        string
+	closed     bool
+	closedCh   chan struct{}
+	onPopup    []func(*Page)
+	onClose    []func()
+	choosers   chan int64 // backend node ids of file choosers
+	mouseX     float64
+	mouseY     float64
+	prefixes   map[string]string // frame id -> data-ra-id prefix
+	popupsSeen map[target.ID]bool
 }
 
 var frameSeq struct {

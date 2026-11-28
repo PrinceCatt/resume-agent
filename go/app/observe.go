@@ -67,11 +67,11 @@ func observe(p *Page, more bool) Obs {
 		}
 		arg := map[string]any{"prefix": p.framePrefix(f.ID), "ordinary": ordinary}
 		var r struct {
-			Elements []El    `json:"elements"`
-			Omitted  int     `json:"omitted"`
+			Elements []El     `json:"elements"`
+			Omitted  int      `json:"omitted"`
 			Errors   []string `json:"errors"`
-			Excerpt  string  `json:"excerpt"`
-			Title    string  `json:"title"`
+			Excerpt  string   `json:"excerpt"`
+			Title    string   `json:"title"`
 		}
 		if err := p.evalCtx(f.ID, collectJS+"("+jsonStr(arg)+")", &r, 25*time.Second); err != nil {
 			continue // frame navigated mid-read
