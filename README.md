@@ -151,7 +151,7 @@ cd py && uv run pytest    # core.test.ts 的 33 个测试 + 扩展中转的 2 �
 
 - 用到 aiohttp（接口和事件流）、Playwright for Python（填表、读岗位、出 PDF）、pypdf（从 PDF 导入简历）。
 - 每个模块对应 `server/` 里的同名文件；提示词原样照搬。
-- `py/resume_agent/relay.py`：Python 版 Playwright 没有 Node 版的「extension 模式」，这里照 playwright-core 1.65 的实现移植了中转（找装了扩展的配置、打开连接页、把 CDP 转成扩展的 chrome.debugger 调用）。测试里用一个假扩展驱动一个临时的无头 Edge 验证过，还没在真扩展上跑过。
+- `py/resume_agent/relay.py`：Python 版 Playwright 没有 Node 版的「extension 模式」，这里照 playwright-core 1.65 的实现移植了中转（找装了扩展的配置、打开连接页、把 CDP 转成扩展的 chrome.debugger 调用）。测试里用一个假扩展驱动一个临时的无头 Edge 验证过，还没在真扩展上跑过。这个文件改写自 Microsoft 的 Playwright，沿用 Apache 2.0 许可证（见 `py/licenses/`），其余代码是 MIT。/ Derived from Playwright (Apache 2.0, see `py/licenses/`); the rest is MIT.
 - 开发开关 `RESUME_AGENT_HEADLESS_BROWSER=1`：助手本来要在你浏览器里开的标签页改开在一个全新的无头浏览器里，不碰你的浏览器，只用于对着 `fixtures/` 测试。
 - 和 TS 版的差别：PDF 导入用 pypdf 取文字（分行可能和 pdf.js 不同）；链接去重用 Python 的 URL 解析（不做国际化域名和百分号编码的规范化）。
 

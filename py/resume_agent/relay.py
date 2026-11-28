@@ -5,7 +5,11 @@ extensionContextFactory.ts, utils/extension.ts in playwright-core 1.65), which t
 and the Python package does not ship: a local WebSocket relay with two ends, /extension/<uuid> for the
 extension and /cdp/<uuid> for Playwright. The extension's connect page is opened in your running browser
 (the profile the extension is installed in); once it connects, Playwright connects to the relay over CDP and
-the relay turns CDP into chrome.tabs / chrome.debugger calls the extension makes for it."""
+the relay turns CDP into chrome.tabs / chrome.debugger calls the extension makes for it.
+
+This file is a derivative work of Playwright, Copyright (c) Microsoft Corporation, licensed under the Apache
+License 2.0 (py/licenses/playwright-LICENSE.txt, with its NOTICE in py/licenses/playwright-NOTICE.txt). It was
+translated from TypeScript to Python and changed to fit this app; the rest of the project is MIT."""
 
 from __future__ import annotations
 
